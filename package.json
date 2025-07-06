@@ -12,7 +12,7 @@
   "description": "",
   "dependencies": {
     "bcrypt": "^6.0.0",
-    "concurrently": "^9.2.0",
+    "bcryptjs": "^3.0.2",
     "config": "^4.0.0",
     "express": "^5.1.0",
     "express-validator": "^7.2.1",
@@ -20,8 +20,11 @@
     "mongoose": "^8.16.1",
     "multer": "^2.0.1",
     "nodemailer": "^7.0.4",
-    "nodemon": "^3.1.10",
     "puppeteer": "^24.11.2",
     "resend": "^4.6.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "nodemon": "^3.1.10"
   }
 }
