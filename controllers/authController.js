@@ -43,8 +43,8 @@ exports.AuthUserToken = async (req, res) => {
     const { email, password } = req.body;    
     try{
         let user = await User.findOne({ email });
-        if (!user) {
-             return res.status(400).json({ msg: 'Invalid credentials ' });
+        if (!user || !user.isVerified) {
+             return res.status(400).json({ msg: 'Invalid credentials or email not verified ' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
@@ -55,6 +55,7 @@ exports.AuthUserToken = async (req, res) => {
             user: {
                 id: user.id,
                 role: user.role,
+                profileUpdated: user.profileUpdated
                 
             }
         }
@@ -63,7 +64,7 @@ exports.AuthUserToken = async (req, res) => {
         },
         (err, token) => {
             if(err) throw err;
-            res.json({ token, role: user.role, userID: user.id})
+            res.json({ token, role: user.role, userID: user.id, profileUpdated: user.profileUpdated})
         }
     )
     }catch(err){
@@ -274,7 +275,7 @@ exports.ResetPassword = async (req, res) => {
 
         const user = await User.findOne({
             email: email,
-            resetToken: hashedToken,
+            resetToken: hashedToken, 
             resetTokenExpiry: { $gt: Date.now()}
         });
 

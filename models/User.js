@@ -23,6 +23,21 @@ const UserSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Parent'
 
+    },
+    profileUpdated: {
+        type: Boolean,
+        default: false
+    },
+    isVerified : {
+        type: Boolean,
+        default: false
+    },
+    resetToken : String,
+    verifyToken: String,
+    resetTokenExpiry: Date,
+    tokenVersion: {
+        type: Number,
+        default: 0
     }
 
 });
