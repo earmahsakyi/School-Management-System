@@ -4,6 +4,7 @@ import adminReducer from "./adminReducer";
 import studentReducer from "./studentReducer";
 import staffReducer from "./staffReducer";
 import gradeReducer from "./gradeReducer";
+import reportCardReducer from './reportCardReducer'
 
 
 const appReducer = combineReducers({
@@ -12,6 +13,7 @@ const appReducer = combineReducers({
   student: studentReducer,
   staff: staffReducer,
   grade: gradeReducer,
+  reportCard: reportCardReducer,
  
 });
 

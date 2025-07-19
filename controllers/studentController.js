@@ -242,6 +242,37 @@ exports.createStudentAndParent = async (req, res) => {
     });
   }
 };
+
+// @desc    Update promotion status
+// @route   PUT /api/students/:id/promotion
+// @access  Private
+exports.updatePromotionStatus = async (req, res) => {
+  try {
+    const { promotionStatus } = req.body;
+    const student = await Student.findById(req.params.id);
+
+    if (!student) {
+      return res.status(404).json({ success: false, msg: 'Student not found' });
+    }
+
+    student.promotionStatus = promotionStatus;
+    await student.save();
+
+    res.status(200).json({
+      success: true,
+      data: student,
+    });
+  } catch (err) {
+    console.error('Update promotion status error:', err);
+    res.status(500).json({
+      success: false,
+      msg: 'Server Error',
+      error: err.message,
+    });
+  }
+};
+
+
 // @desc    get all students
 // @route   GET /api/student
 // @access  Private

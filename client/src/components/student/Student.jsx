@@ -20,10 +20,13 @@ import {
   ChevronRight,
   Filter,
   AlertCircle,
-  Loader2
+  Loader2,
+  CheckCircle,
+   FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useNavigate } from 'react-router-dom';
 import { 
   Select,
   SelectContent,
@@ -63,6 +66,7 @@ const gradeLevels = [7, 8, 9, 10, 11, 12];
 const departments = ["Arts", "Science","JHS"];
 
 
+
 // Utility function to get student avatar
 const getStudentAvatar = (student) => {
   const API_BASE_URL = 'http://localhost:5000';
@@ -77,7 +81,6 @@ const getStudentAvatar = (student) => {
   
   return avatarSrc;
 };
-
 // Fallback avatar for error cases
 const getFallbackAvatar = (student) => {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(student?.lastName || student?.firstName || "Student")}&background=6366f1&color=fff&size=40&rounded=true`;
@@ -86,6 +89,7 @@ const getFallbackAvatar = (student) => {
 const Students = () => {
   const dispatch = useDispatch();
   const studentsRef = useRef([]);
+   const navigate = useNavigate(); 
   
   // Redux state
   const { 
@@ -227,10 +231,29 @@ const Students = () => {
           >
             <Trash2 className="h-4 w-4" />
           </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-green-500 hover:bg-green-500/10"
+            onClick={() => navigate(`/admin/promotion/${row.original._id}`)}
+          >
+            <CheckCircle className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-blue-500 hover:bg-blue-500/10"
+            onClick={() => handleReportCard(row.original._id)}
+            title="Generate Report Card"
+          >
+            <FileText className="h-4 w-4" />
+          </Button>
         </div>
       )
     },
-  ], []);
+  ], [navigate
+    
+  ]);
 
   const filteredData = useMemo(() => {
 
@@ -284,9 +307,15 @@ const Students = () => {
       setStudentToEdit(student);
       setIsEditStudentOpen(true);
     }
-  }, [students, dispatch]);
+  }, [students, dispatch,studentsRef]);
 
-
+  
+// Add this to your component's main body
+const handleReportCard = (studentId) => {
+  // Get current academic year (you might want to make this dynamic)
+  const currentAcademicYear = '2024/2025'; 
+  navigate(`/api/reportcard/${studentId}/${encodeURIComponent(currentAcademicYear)}/1`);
+};
 
   const handleDeleteClick = useCallback((student) => {
   setStudentToDelete(student);

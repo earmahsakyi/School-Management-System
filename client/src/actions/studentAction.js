@@ -231,6 +231,32 @@ export const searchStudents = (admissionNumber) => async (dispatch) => {
   }
 };
 
+// Update promotion status
+export const updatePromotionStatus = (studentId, promotionStatus) => async (dispatch) => {
+  try {
+    const token = localStorage.getItem('token')
+
+    const config = {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-token' : token
+      }
+    }
+    
+    const res = await axios.put(`/api/student/${studentId}/promotion`, promotionStatus, config);
+
+    dispatch({
+      type: UPDATE_STUDENT_SUCCESS,
+      payload: res.data,
+    });
+  } catch (err) {
+    dispatch({
+      type: UPDATE_STUDENT_FAIL,
+      payload: err.response.data.msg,
+    });
+  }
+};
+
 // Get Provider Stats
 export const getStats = () => async (dispatch) => {
   

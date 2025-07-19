@@ -19,11 +19,12 @@
     "config": "^4.0.0",
     "express": "^5.1.0",
     "express-validator": "^7.2.1",
+    "file-saver": "^2.0.5",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.1",
     "multer": "^2.0.1",
     "nodemailer": "^7.0.4",
-    "puppeteer": "^24.11.2",
+    "puppeteer": "^24.14.0",
     "resend": "^4.6.0"
   },
   "devDependencies": {

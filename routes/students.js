@@ -15,7 +15,8 @@ const {
   updateStudentAndParent,
   deleteStudentAndParent,
   searchStudents,
-  getSchoolStats
+  getSchoolStats,
+  updatePromotionStatus
 } = require('../controllers/studentController');
 
 // Custom Multer setup for handling multiple file fields for update/create
@@ -221,5 +222,6 @@ router.get('/', auth, getAllStudents);
 router.get('/stats', auth, getSchoolStats);
 router.get('/:id', auth, getStudentById);
 router.delete('/:id', auth, deleteStudentAndParent);
+router.put('/:id/promotion', auth,updatePromotionStatus);
 
 module.exports = router;

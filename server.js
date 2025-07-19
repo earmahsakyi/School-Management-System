@@ -19,7 +19,8 @@ app.use('/uploads/staff', express.static(path.join(__dirname, 'uploads', 'staff'
 // Define Routes
 app.use('/api/auth',require('./routes/auth'));      
 app.use('/api/admin',require('./routes/admin'));        
-app.use('/api/student',require('./routes/students'));      
+app.use('/api/student',require('./routes/students'));
+app.use('/api/reportcard', require('./routes/reportCard'));      
 app.use('/api/staff',require('./routes/staff'));      
 app.use('/api/grade',require('./routes/grade'));      
 

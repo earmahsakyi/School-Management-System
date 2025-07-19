@@ -72,7 +72,13 @@ const studentSchema = new mongoose.Schema({
   parent: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Parent'
+  },
+  promotionStatus: {
+    type: String,
+    enum: ['Promoted', 'Not Promoted', 'Conditional Promotion'],
+    default: 'Not Promoted'
   }
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Student', studentSchema);

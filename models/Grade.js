@@ -67,6 +67,16 @@ const gradeSchema = new mongoose.Schema({
   totalStudents: {
     type: Number,
     default: null
+  },
+  attendance: {
+    daysPresent: { type: Number, default: 0 },
+    daysAbsent: { type: Number, default: 0 },
+    timesTardy: { type: Number, default: 0 }
+  },
+  conduct: {
+    type: String,
+    enum: ["Excellent", "Good", "Satisfactory", "Needs Improvement"],
+    default: "Good"
   }
 }, { timestamps: true });
 
