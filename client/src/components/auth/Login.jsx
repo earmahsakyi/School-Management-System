@@ -40,13 +40,15 @@ const Login = () => {
     }
     try {
       const result = await dispatch(login(formData));
+      
       if (result?.success) {
         if (result.role === 'admin') {
-          navigate(result.profileUpdated ? '/admin-page' : '/complete-admin-profile');
+          toast.success("Login Successful")
+          navigate(result.profileUpdated ? '/admin-dashboard' : '/complete-admin-profile');
         } else if (result.role === 'parent') {
           navigate('/parent-page');
         }
-      }
+      }  
     } catch (err) {
       console.error("Login error:", err);
     }

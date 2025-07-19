@@ -13,7 +13,8 @@ import {
   SEARCH_ADMINS_FAIL,
   GET_ADMIN,
   GET_ADMIN_FAIL,
-  ADMIN_SET_LOADING
+  ADMIN_SET_LOADING,
+  CLEAR_ERRORS
 } from '../actions/types.js';
 
 
@@ -90,7 +91,7 @@ export default function (state = initialState, action) {
       return {
         ...state,
         profile: null,
-        loading: false,
+        loading: false,  
         error: null
       };
 

@@ -16,7 +16,7 @@ const UserSchema = new mongoose.Schema({
         type: String,
         enum: ['parent', 'admin'],
         default: 'admin',
-        required: true
+        required: true  
         
     },
     linkedParentId: {

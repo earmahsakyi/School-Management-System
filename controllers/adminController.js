@@ -199,7 +199,7 @@ exports.deleteAdminProfile = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      msg: 'Admin profile deleted'
+      msg: 'Admin profile deleted'  
     });
   } catch (err) {
     console.error(err.message);

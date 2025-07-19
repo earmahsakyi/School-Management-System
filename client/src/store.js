@@ -3,7 +3,12 @@ import index from './reducer/index';
 
 const store = configureStore({
   reducer: index,
-  // no need to add middleware manually unless you're customizing
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      immutableCheck: false,  // speeds up large state checks
+      serializableCheck: false // skips checking for non-serializable values
+    }),
+  devTools: process.env.NODE_ENV !== 'production'
 });
 
 export default store;

@@ -1,11 +1,17 @@
 import { combineReducers } from "redux";
 import authReducer from "./authReducer";
 import adminReducer from "./adminReducer";
+import studentReducer from "./studentReducer";
+import staffReducer from "./staffReducer";
+import gradeReducer from "./gradeReducer";
 
 
 const appReducer = combineReducers({
   auth: authReducer,
   admin: adminReducer,
+  student: studentReducer,
+  staff: staffReducer,
+  grade: gradeReducer,
  
 });
 

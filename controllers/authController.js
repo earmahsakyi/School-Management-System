@@ -2,7 +2,6 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer'); 
 const config = require('../config/default.json');
 const { validationResult } =require('express-validator');
 const sendEmail = require('../utils/sendEmail')
@@ -248,6 +247,7 @@ exports.forgotPassword = async (req, res) => {
         `
     });
     res.json({
+        success: true,
         message: 'Verification code sent successfully',
         email: user.email,
     })

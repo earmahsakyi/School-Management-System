@@ -76,7 +76,7 @@ export const getCurrentAdminProfile = () => async (dispatch) => {
 };
 
 // Create or update Admin profile
-export const updateProviderProfile = (formData) => async (dispatch) => {
+export const createOrUpdateAdminProfile = (formData) => async (dispatch) => {
   try {
     dispatch(setAdminLoading());
 
@@ -93,16 +93,20 @@ export const updateProviderProfile = (formData) => async (dispatch) => {
       payload: res.data.data
     });
 
-    return res.data;
+    return { success: true, data: res.data.data };
 
   } catch (err) {
+    const errorMessage = err.response?.data?.msg || 'Error updating profile';
+
     dispatch({
       type: UPDATE_ADMIN_PROFILE_FAIL,
-      payload: err.response?.data?.msg || 'Error updating profile'
+      payload: errorMessage
     });
-    throw err;
+
+    return { success: false, error: errorMessage };
   }
 };
+
 
 // Get all admins
 export const getAdmins = () => async (dispatch) => {

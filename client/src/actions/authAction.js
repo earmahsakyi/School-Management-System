@@ -128,7 +128,8 @@ export const login = (formData) => async (dispatch) => {
 
     return { 
       success: true,
-      role, // Return role for immediate use
+      role, 
+      profileUpdated
     };
 
   } catch (err) {
@@ -196,11 +197,11 @@ export const registerUser = (formData) => async (dispatch) => {
 };
 //forgot password
 
-export const forgotPassword = (email) => async (dispatch) => {
+export const forgotPassword = (email,secretKey) => async (dispatch) => {
   dispatch(setAuthLoading()); // Use new action creator
 
    try {
-    const res = await axios.post('/api/auth/forgot-password', { email });
+    const res = await axios.post('/api/auth/forgot-password', { email, secretKey });
     const { message } = res.data;
     localStorage.setItem('email', email);
 
