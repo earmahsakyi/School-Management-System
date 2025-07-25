@@ -23,8 +23,12 @@ app.use('/api/student',require('./routes/students'));
 app.use('/api/reportcard', require('./routes/reportCard'));      
 app.use('/api/staff',require('./routes/staff'));      
 app.use('/api/grade',require('./routes/grade'));      
+app.use('/api/transcript',require('./routes/transcript'));      
+app.use('/api/master-grade-sheet',require('./routes/gradeSheet'));     
+app.use('/api/recommendation',require('./routes/recommendation'));     
+app.use('/api/rooster-summary',require('./routes/rosterSummary'));     
 
-   
+       
 const PORT = 5000;
 
 app.listen(PORT, () => console.log(`Server started on Port ${PORT}`))

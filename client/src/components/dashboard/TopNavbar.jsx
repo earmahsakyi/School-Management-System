@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { logout } from '@/actions/authAction';
+import EditAdminProfileModal from '../auth/EditAdminProfile';
 
 import {
   DropdownMenu,
@@ -21,6 +22,7 @@ export function TopNavbar({ onMenuClick }) {
   const API_BASE_URL = 'http://localhost:5000';
   const { profile, loading } = useSelector(state => state.admin);
   const { user } = useSelector(state => state.auth);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [notifications] = useState([
     { id: 1, title: 'New student registration', time: '5 min ago' },
     { id: 2, title: 'Fee payment received', time: '1 hour ago' },
@@ -36,6 +38,15 @@ const onLogout = () => {
   navigate('/')
 
 }
+
+const handleEditProfile = () => {
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+  };
+
 
 if (loading && !profile) {
     return (
@@ -132,7 +143,7 @@ if (loading && !profile) {
               <p className="text-xs text-muted-foreground">{user?.email}</p>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleEditProfile}>
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </DropdownMenuItem>
@@ -147,6 +158,11 @@ if (loading && !profile) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <EditAdminProfileModal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        />
       </div>
     </header>
   );

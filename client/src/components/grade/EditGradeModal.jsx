@@ -31,9 +31,16 @@ export function EditGradeModal({ open, onOpenChange, grade, onSuccess }) {
     defaultValues: {
       academicYear: '',
       term: '',
+      studentId: '',
       gradeLevel: '',
       department: '',
-      subjects: [{
+      conduct: '',
+       attendance: {
+    daysPresent: '',
+    daysAbsent: '',
+    timesTardy: ''
+       },
+      subjects: [{ // Ensure one subject field by default
         subject: '',
         scores: {
           period1: '',
@@ -113,8 +120,14 @@ export function EditGradeModal({ open, onOpenChange, grade, onSuccess }) {
       reset({
         academicYear: grade.academicYear || '',
         term: grade.term || '',
+        conduct: grade.conduct || '',
         gradeLevel: grade.gradeLevel || '',
         department: grade.department || '',
+        attendance: {
+    daysPresent: grade.attendance?.daysPresent?.toString() || '',
+    daysAbsent: grade.attendance?.daysAbsent?.toString() || '',
+    timesTardy: grade.attendance?.timesTardy?.toString() || ''
+  },
         subjects: grade.subjects?.length > 0 
           ? grade.subjects.map(subj => ({
               subject: subj.subject,
@@ -222,7 +235,13 @@ export function EditGradeModal({ open, onOpenChange, grade, onSuccess }) {
         gradeLevel: data.gradeLevel,
         department: data.department,
         subjects: processedSubjects,
-        overallAverage: parseFloat(calculateOverallAverage()) || 0
+        overallAverage: parseFloat(calculateOverallAverage()) || 0,
+        attendance: {
+        daysPresent: data.attendance.daysPresent || 0,
+        daysAbsent: data.attendance.daysAbsent || 0,
+        timesTardy: data.attendance.timesTardy || 0
+        },
+        conduct: data.conduct || "Good"
       };
 
       await dispatch(updateGrade(grade._id, payload));
@@ -331,6 +350,57 @@ export function EditGradeModal({ open, onOpenChange, grade, onSuccess }) {
                 </div>
               </div>
             </div>
+                                                              
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <Label htmlFor="daysPresent">Days Present</Label>
+                    <Input
+                      id="daysPresent"
+                      type="number"
+                      min="0"
+                      {...register("attendance.daysPresent", { valueAsNumber: true,min: { value: 0, message: "Must be 0 or more" } })}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="daysAbsent">Days Absent</Label>
+                    <Input
+                      id="daysAbsent"
+                      type="number"
+                      min="0"
+                      {...register("attendance.daysAbsent", { valueAsNumber: true,min: { value: 0, message: "Must be 0 or more" } })}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="timesTardy">Times Tardy</Label>
+                    <Input
+                      id="timesTardy"
+                      type="number"
+                      min="0"
+                      {...register("attendance.timesTardy", { valueAsNumber: true,min: { value: 0, message: "Must be 0 or more" } })}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="conduct">Conduct</Label>
+                    <Select
+                      onValueChange={(v) => setValue('conduct', v)}
+                      value={watch('conduct')}
+                      disabled={isSubmitting}
+                    >
+                      <SelectTrigger id="conduct">
+                        <SelectValue placeholder="Select Conduct" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Excellent">Excellent</SelectItem>
+                        <SelectItem value="Good">Good</SelectItem>
+                        <SelectItem value="Satisfactory">Satisfactory</SelectItem>
+                        <SelectItem value="Needs Improvement">Needs Improvement</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
             {/* Subjects and Scores */}
             <Card>

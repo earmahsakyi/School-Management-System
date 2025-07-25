@@ -1,8 +1,10 @@
-import React, { useState, useMemo, useEffect, useCallback,useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { DashboardLayout } from '../dashboard/DashboardLayout';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
+import AdminPromotionModal from '../auth/AdminPromotionView'; 
 import { AddStudentModal } from '../dashboard/AddStudentModal';
+import RecommendationModal from '../student/RecommendationModal'; 
 import {
   useReactTable,
   getCoreRowModel,
@@ -22,7 +24,8 @@ import {
   AlertCircle,
   Loader2,
   CheckCircle,
-   FileText
+  FileText,
+  Award // Add Award icon for recommendation
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,8 +68,6 @@ import {
 const gradeLevels = [7, 8, 9, 10, 11, 12];
 const departments = ["Arts", "Science","JHS"];
 
-
-
 // Utility function to get student avatar
 const getStudentAvatar = (student) => {
   const API_BASE_URL = 'http://localhost:5000';
@@ -81,6 +82,7 @@ const getStudentAvatar = (student) => {
   
   return avatarSrc;
 };
+
 // Fallback avatar for error cases
 const getFallbackAvatar = (student) => {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(student?.lastName || student?.firstName || "Student")}&background=6366f1&color=fff&size=40&rounded=true`;
@@ -89,7 +91,7 @@ const getFallbackAvatar = (student) => {
 const Students = () => {
   const dispatch = useDispatch();
   const studentsRef = useRef([]);
-   const navigate = useNavigate(); 
+  const navigate = useNavigate(); 
   
   // Redux state
   const { 
@@ -100,8 +102,7 @@ const Students = () => {
     count 
   } = useSelector(state => state.student);
  
-
-   useEffect(() => {
+  useEffect(() => {
     if (students && Array.isArray(students) && students.length > 0) {
       studentsRef.current = students;
     }
@@ -117,12 +118,18 @@ const Students = () => {
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  
+  // Add promotion modal state
+  const [isPromotionModalOpen, setIsPromotionModalOpen] = useState(false);
+  const [studentForPromotion, setStudentForPromotion] = useState(null);
+
+  // Add recommendation modal state
+  const [isRecommendationModalOpen, setIsRecommendationModalOpen] = useState(false);
+  const [studentForRecommendation, setStudentForRecommendation] = useState(null);
 
   // Fetch students on component mount
   useEffect(() => {
-     
     dispatch(getAllStudents());
-
 
     // Cleanup on unmount
     return () => {
@@ -150,9 +157,25 @@ const Students = () => {
     }
   }, [message, dispatch]);
 
+  // Handle promotion click
+  const handlePromotionClick = useCallback((student) => {
+    setStudentForPromotion(student);
+    setIsPromotionModalOpen(true);
+  }, []);
+
+  // Handle recommendation click
+  const handleRecommendationClick = useCallback((student) => {
+    setStudentForRecommendation({
+      id: student._id,
+      firstName: student.firstName,
+      lastName: student.lastName,
+      admissionNumber: student.admissionNumber,
+      gradeLevel: student.gradeLevel
+    });
+    setIsRecommendationModalOpen(true);
+  }, []);
 
   const columns = useMemo(() => [
-    
     {
       accessorKey: 'student',
       header: 'Student Information',
@@ -213,66 +236,64 @@ const Students = () => {
       id: 'actions',
       header: 'Actions',
       cell: ({ row }) => (
-     
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-primary hover:bg-primary/10"
             onClick={() => handleEdit(row.original._id)}
+            title="Edit Student"
           >
             <Edit className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-destructive hover:bg-destructive/10"
-            onClick={() => handleDeleteClick(row.original)}
+            className="h-8 w-8 text-teal-600 hover:bg-teal-600/10"
+            onClick={() => handleRecommendationClick(row.original)}
+            title="Generate Recommendation Letter"
           >
-            <Trash2 className="h-4 w-4" />
+            <Award className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-green-500 hover:bg-green-500/10"
-            onClick={() => navigate(`/admin/promotion/${row.original._id}`)}
+            onClick={() => handlePromotionClick(row.original)}
+            title="Set Promotion Status"
           >
             <CheckCircle className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-blue-500 hover:bg-blue-500/10"
-            onClick={() => handleReportCard(row.original._id)}
-            title="Generate Report Card"
+            className="h-8 w-8 text-destructive hover:bg-destructive/10"
+            onClick={() => handleDeleteClick(row.original)}
+            title="Delete Student"
           >
-            <FileText className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       )
     },
-  ], [navigate
-    
-  ]);
+  ], [handlePromotionClick, handleRecommendationClick]);
 
   const filteredData = useMemo(() => {
-
     if (!students || !Array.isArray(students)) return [];
     
     const filtered = students.filter(student => {
-    const matchesGlobal = globalFilter === '' || 
-      student.firstName?.toLowerCase().includes(globalFilter.toLowerCase()) ||
-      student.lastName?.toLowerCase().includes(globalFilter.toLowerCase()) ||
-      student.admissionNumber?.toLowerCase().includes(globalFilter.toLowerCase());
+      const matchesGlobal = globalFilter === '' || 
+        student.firstName?.toLowerCase().includes(globalFilter.toLowerCase()) ||
+        student.lastName?.toLowerCase().includes(globalFilter.toLowerCase()) ||
+        student.admissionNumber?.toLowerCase().includes(globalFilter.toLowerCase());
+      
+      const matchesGrade = gradeFilter === '' || student.gradeLevel?.toString() === gradeFilter;
+      const matchesDepartment = departmentFilter === '' || student.department === departmentFilter;
+      
+      return matchesGlobal && matchesGrade && matchesDepartment;
+    });
     
-    const matchesGrade = gradeFilter === '' || student.gradeLevel?.toString() === gradeFilter;
-    const matchesDepartment = departmentFilter === '' || student.department === departmentFilter;
-    
-    return matchesGlobal && matchesGrade && matchesDepartment;
-  });
-  
-  return filtered;
-    
+    return filtered;
   }, [students, globalFilter, gradeFilter, departmentFilter]);
 
   const table = useReactTable({
@@ -290,10 +311,8 @@ const Students = () => {
   });
 
   const handleEdit = useCallback((studentId) => {
-    
     // Use students from state, fallback to ref if state is empty
     const studentsToUse = (students && students.length > 0) ? students : studentsRef.current;
-    
     
     if (!studentsToUse || !Array.isArray(studentsToUse) || studentsToUse.length === 0) {
       console.error('No students data available, refreshing...');
@@ -307,20 +326,12 @@ const Students = () => {
       setStudentToEdit(student);
       setIsEditStudentOpen(true);
     }
-  }, [students, dispatch,studentsRef]);
-
-  
-// Add this to your component's main body
-const handleReportCard = (studentId) => {
-  // Get current academic year (you might want to make this dynamic)
-  const currentAcademicYear = '2024/2025'; 
-  navigate(`/api/reportcard/${studentId}/${encodeURIComponent(currentAcademicYear)}/1`);
-};
+  }, [students, dispatch, studentsRef]);
 
   const handleDeleteClick = useCallback((student) => {
-  setStudentToDelete(student);
-  setDeleteDialogOpen(true);
-}, []);
+    setStudentToDelete(student);
+    setDeleteDialogOpen(true);
+  }, []);
 
   const handleDeleteConfirm = async () => {
     if (!studentToDelete) return;
@@ -352,6 +363,12 @@ const handleReportCard = (studentId) => {
     dispatch(getAllStudents());
   };
 
+  // Handle closing recommendation modal
+  const handleCloseRecommendationModal = () => {
+    setIsRecommendationModalOpen(false);
+    setStudentForRecommendation(null);
+  };
+
   const pageCount = table.getPageCount();
   const currentPage = table.getState().pagination.pageIndex;
 
@@ -380,6 +397,13 @@ const handleReportCard = (studentId) => {
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Student
+            </Button>
+            <Button 
+              onClick={()=> navigate('/reportCards')}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              View Report Card
             </Button>
           </div>
         </div>
@@ -611,16 +635,35 @@ const handleReportCard = (studentId) => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Modals */}
         <AddStudentModal 
           open={isAddStudentOpen} 
           onOpenChange={setIsAddStudentOpen} 
         />
+        
         <EditStudentModal 
           open={isEditStudentOpen} 
-        onOpenChange={setIsEditStudentOpen}
-       studentData={studentToEdit}
-       isEditing={true}
+          onOpenChange={setIsEditStudentOpen}
+          studentData={studentToEdit}
+          isEditing={true}
+        />
+
+        {/* Promotion Modal */}
+        {studentForPromotion && (
+          <AdminPromotionModal 
+            studentId={studentForPromotion._id}
+            open={isPromotionModalOpen}
+            onOpenChange={setIsPromotionModalOpen}
           />
+        )}
+
+        {/* Recommendation Modal */}
+        <RecommendationModal
+          isOpen={isRecommendationModalOpen}
+          onClose={handleCloseRecommendationModal}
+          student={studentForRecommendation}
+        />
       </div>
     </DashboardLayout>
   );

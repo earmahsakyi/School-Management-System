@@ -4,6 +4,7 @@ import { Plus, UserPlus, BookPlus, CalendarPlus, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AddStudentModal } from './AddStudentModal';
+import { AddStaffModal } from '../staff/AddStaffModal';
 
 const quickActions = [
   {
@@ -15,12 +16,12 @@ const quickActions = [
     action: 'add-student',
   },
   {
-    title: 'New Class',
-    description: 'Create a new class',
+    title: 'Add Staff',
+    description: 'Create a new Staff',
     icon: BookPlus,
     color: 'text-academic-success',
     bgColor: 'bg-academic-success/10',
-    action: 'add-class',
+    action: 'add-staff',
   },
   {
     title: 'Schedule Event',
@@ -42,12 +43,17 @@ const quickActions = [
 
 export function QuickActions() {
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
 
   const handleAction = (action) => {
     switch (action) {
       case 'add-student':
         setIsAddStudentOpen(true);
         break;
+      case 'add-staff':
+        setIsAddStaffOpen(true);
+        break;
+      
       default:
         console.log(`Action: ${action}`);
     }
@@ -102,6 +108,10 @@ export function QuickActions() {
       <AddStudentModal 
         open={isAddStudentOpen} 
         onOpenChange={setIsAddStudentOpen} 
+      />
+      <AddStaffModal
+      open={isAddStaffOpen}
+      onOpenChange={setIsAddStaffOpen}
       />
     </>
   );

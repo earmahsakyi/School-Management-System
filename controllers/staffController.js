@@ -2,16 +2,20 @@ const Staff = require('../models/Staff');
 const fs = require('fs');
 const path = require('path');
 const generateStaffID = require('../utils/generateStaffID');
-const StaffAudit = require('../models/StaffAudit')
+const StaffAudit = require('../models/StaffAudit');
 
 // @desc    Create new staff
 // @route   POST /api/staff
 // @access  Private
 exports.createStaff = async (req, res) => {
   try {
-    const { firstName, lastName, dob, gender, middleName, placeOfBirth, position, department, qualifications, phone, email } = req.body;
-  
-    // Helper function to clean up files
+    const {
+      firstName, lastName, dob, gender, middleName,
+      placeOfBirth, position, department, qualifications,
+      phone, email, currentAddress, nationalID,
+      startYear, endYear, name,maritalStatus,nationality,ssn,payrollNumber,yearOfEmployment
+    } = req.body;
+
     const cleanupFiles = (files) => {
       if (files) {
         Object.values(files).forEach(fileArray => {
@@ -25,25 +29,22 @@ exports.createStaff = async (req, res) => {
       }
     };
 
-    // Validate
-    const requiredFields = { firstName, lastName, dob, gender, position, department, phone, email, placeOfBirth };
+    const requiredFields = { firstName, lastName, dob, gender, position, department, phone, email,name, placeOfBirth,nationality,maritalStatus,ssn,payrollNumber,yearOfEmployment };
     const missingFields = Object.entries(requiredFields).filter(([_, v]) => !v).map(([k]) => k);
     if (missingFields.length > 0) {
-      cleanupFiles(req.files); // Corrected cleanup
+      cleanupFiles(req.files);
       return res.status(400).json({ success: false, msg: 'Missing required fields', missingFields });
     }
 
-    // Check duplicate email
     const existingStaff = await Staff.findOne({ email });
     if (existingStaff) {
-      cleanupFiles(req.files); // Corrected cleanup
+      cleanupFiles(req.files);
       return res.status(409).json({ success: false, msg: 'Staff with this email already exists' });
     }
 
-    // Generate staff ID with retry logic for uniqueness
     let staffId;
     let staff;
-    for (let i = 0; i < 5; i++) { // Retry up to 5 times
+    for (let i = 0; i < 5; i++) {
       staffId = await generateStaffID();
       try {
         const staffData = {
@@ -59,22 +60,35 @@ exports.createStaff = async (req, res) => {
           staffId,
           phone,
           email,
+          nationality,
+          maritalStatus: maritalStatus || '',
+          currentAddress: currentAddress || '',
+          nationalID: nationalID || '',
+          institutionAttended: {
+            name: name ? String(name) : undefined,
+            startYear: startYear ? Number(startYear) : undefined,
+            endYear: endYear ? Number(endYear) : undefined
+          },
+          ssn: ssn ||null,
+          yearOfEmployment: yearOfEmployment || null,
+          payrollNumber: payrollNumber || null
         };
 
         // Handle photo upload
-        if (req.files && req.files.photo && req.files.photo.length > 0) {
+        if (req.files?.photo?.length > 0) {
           const photoFile = req.files.photo[0];
           staffData.photo = `uploads/staff/${path.basename(photoFile.path)}`;
         }
 
-        // Handle certificate upload
-        if (req.files && req.files.certificate && req.files.certificate.length > 0) {
-          const certificateFile = req.files.certificate[0];
-          staffData.certificate = `uploads/certificate/${path.basename(certificateFile.path)}`;
+        //  Handle multiple certificate file uploads
+        if (req.files?.certificates?.length > 0) {
+          staffData.certificates = req.files.certificates.map(file =>
+            `uploads/certificate/${path.basename(file.path)}`
+          );
         }
 
         staff = await Staff.create(staffData);
-        break; // Successfully created staff with unique ID
+        break; // Success
       } catch (err) {
         if (err.code === 11000 && err.keyValue?.staffId) {
           console.log('Duplicate staffId, retrying...');
@@ -86,15 +100,14 @@ exports.createStaff = async (req, res) => {
     }
 
     if (!staff) {
-      cleanupFiles(req.files); // Cleanup if ID generation failed after retries
+      cleanupFiles(req.files);
       throw new Error('Failed to generate unique Staff ID after multiple attempts');
     }
 
-    // Audit trail for staff creation
     await StaffAudit.create({
       staff: staff._id,
       action: 'created',
-      fieldsChanged: Object.keys(staff.toObject()), // Log all fields as changed on creation
+      fieldsChanged: Object.keys(staff.toObject()),
       performedBy: req.user.id
     });
 
@@ -105,7 +118,7 @@ exports.createStaff = async (req, res) => {
 
   } catch (err) {
     console.error('Create staff error:', err);
-    cleanupFiles(req.files); // Corrected cleanup in catch block
+    cleanupFiles(req.files);
     res.status(500).json({ success: false, msg: 'Server Error', error: err.message });
   }
 };
@@ -187,9 +200,12 @@ exports.searchStaff = async (req, res) => {
 // @access  Private
 exports.updateStaff = async (req, res) => {
   try {
-    const { firstName, lastName, middleName, dob, placeOfBirth, gender, position, department, qualifications, phone, email } = req.body;
+    const {
+      firstName, lastName, middleName, dob, placeOfBirth, gender,
+      position, department, qualifications, phone, email,
+      currentAddress, nationalID, startYear, endYear,name,nationality,maritalStatus,ssn,yearOfEmployment,payrollNumber
+    } = req.body;
 
-    // Helper function to clean up files
     const cleanupFiles = (files) => {
       if (files) {
         Object.values(files).forEach(fileArray => {
@@ -205,70 +221,92 @@ exports.updateStaff = async (req, res) => {
 
     let staff = await Staff.findById(req.params.id);
     if (!staff) {
-      cleanupFiles(req.files); // Corrected cleanup
+      cleanupFiles(req.files);
       return res.status(404).json({ success: false, msg: 'Staff not found' });
     }
 
-    // Check for duplicate email if email is being changed
+    // Check for duplicate email
     if (email && email !== staff.email) {
       const existingStaffWithEmail = await Staff.findOne({ email });
       if (existingStaffWithEmail && String(existingStaffWithEmail._id) !== String(staff._id)) {
-        cleanupFiles(req.files); // Corrected cleanup
+        cleanupFiles(req.files);
         return res.status(409).json({ success: false, msg: 'Staff with this email already exists' });
       }
     }
 
-    const originalStaff = staff.toObject(); // Capture original state for auditing
+    const originalStaff = staff.toObject();
 
-    // Update fields
-    staff.firstName = firstName !== undefined ? firstName : staff.firstName;
-    staff.lastName = lastName !== undefined ? lastName : staff.lastName;
-    staff.middleName = middleName !== undefined ? middleName : staff.middleName;
-    staff.dob = dob !== undefined ? dob : staff.dob;
-    staff.placeOfBirth = placeOfBirth !== undefined ? placeOfBirth : staff.placeOfBirth;
-    staff.gender = gender !== undefined ? gender : staff.gender;
-    staff.position = position !== undefined ? position : staff.position;
-    staff.department = department !== undefined ? department : staff.department;
-    staff.qualifications = qualifications !== undefined ? (qualifications ? qualifications.split(',').map(q => q.trim()) : []) : staff.qualifications;
-    staff.phone = phone !== undefined ? phone : staff.phone;
-    staff.email = email !== undefined ? email : staff.email;
+    // === Update core fields ===
+    staff.firstName = firstName ?? staff.firstName;
+    staff.lastName = lastName ?? staff.lastName;
+    staff.middleName = middleName ?? staff.middleName;
+    staff.dob = dob ?? staff.dob;
+    staff.placeOfBirth = placeOfBirth ?? staff.placeOfBirth;
+    staff.gender = gender ?? staff.gender;
+    staff.position = position ?? staff.position;
+    staff.department = department ?? staff.department;
+    staff.phone = phone ?? staff.phone;
+    staff.email = email ?? staff.email;
+    staff.currentAddress = currentAddress ?? staff.currentAddress;
+    staff.nationalID = nationalID ?? staff.nationalID;
+    staff.maritalStatus = maritalStatus ?? staff.maritalStatus;
+    staff.nationality = nationality ?? staff.nationality;
+    staff.ssn = ssn ?? staff.ssn;
+    staff.yearOfEmployment = yearOfEmployment ?? staff.yearOfEmployment;
+    staff.payrollNumber = payrollNumber ?? staff.payrollNumber;
 
-    // Handle photo update
-    if (req.files && req.files.photo && req.files.photo.length > 0) {
-      // Delete old photo if exists
+    // Qualifications (as comma-separated string)
+    if (qualifications !== undefined) {
+      staff.qualifications = qualifications ? qualifications.split(',').map(q => q.trim()) : [];
+    }
+
+    // Institution Attended
+    if (!staff.institutionAttended) staff.institutionAttended = {};
+    if (name !== undefined) staff.institutionAttended.name = String(name);
+    if (startYear !== undefined) staff.institutionAttended.startYear = Number(startYear);
+    if (endYear !== undefined) staff.institutionAttended.endYear = Number(endYear);
+    
+
+    // === Photo Upload ===
+    if (req.files?.photo?.length > 0) {
       if (staff.photo && fs.existsSync(staff.photo)) {
         fs.unlinkSync(staff.photo);
       }
       staff.photo = `uploads/staff/${path.basename(req.files.photo[0].path)}`;
     }
 
-    // Handle certificate update
-    if (req.files && req.files.certificate && req.files.certificate.length > 0) {
-      // Delete old certificate if exists
-      if (staff.certificate && fs.existsSync(staff.certificate)) {
-        fs.unlinkSync(staff.certificate);
+    //  Certificates Upload - Handle multiple certificates properly
+    if (req.files?.certificates?.length > 0) {
+      // Delete old certificate files if they exist
+      if (staff.certificates && Array.isArray(staff.certificates)) {
+        staff.certificates.forEach(cert => {
+          if (fs.existsSync(cert)) {
+            fs.unlinkSync(cert);
+          }
+        });
       }
-      staff.certificate = `uploads/certificate/${path.basename(req.files.certificate[0].path)}`;
+      // Add new certificates
+      staff.certificates = req.files.certificates.map(file =>
+        `uploads/certificate/${path.basename(file.path)}`
+      );
     }
 
     await staff.save();
 
-    // Audit trail for staff update
+    // === Audit Trail ===
     const changedFields = [];
     for (const key in staff._doc) {
-      // Exclude _id, staffId, createdAt, updatedAt, __v for audit
       if (['_id', 'staffId', 'createdAt', 'updatedAt', '__v'].includes(key)) continue;
-
       if (JSON.stringify(originalStaff[key]) !== JSON.stringify(staff[key])) {
         changedFields.push(key);
       }
-    }
+    }  
 
-    if (changedFields.length > 0 || (req.files && (req.files.photo || req.files.certificate))) {
+    if (changedFields.length > 0 || req.files?.photo || req.files?.certificates) {
       await StaffAudit.create({
         staff: staff._id,
         action: 'updated',
-        fieldsChanged: changedFields.length > 0 ? changedFields : ['file_upload'], // Indicate file change if no other fields changed
+        fieldsChanged: changedFields.length > 0 ? changedFields : ['file_upload'],
         performedBy: req.user.id
       });
     }
@@ -281,7 +319,7 @@ exports.updateStaff = async (req, res) => {
 
   } catch (err) {
     console.error('Update staff error:', err);
-    cleanupFiles(req.files); // Corrected cleanup in catch block
+    cleanupFiles(req.files);
     res.status(500).json({ success: false, msg: 'Server Error', error: err.message });
   }
 };
@@ -301,10 +339,15 @@ exports.deleteStaff = async (req, res) => {
       fs.unlinkSync(staff.photo);
       console.log('Deleted staff photo:', staff.photo);
     }
-    // Remove certificate
-    if (staff.certificate && fs.existsSync(staff.certificate)) {
-      fs.unlinkSync(staff.certificate);
-      console.log('Deleted staff certificate:', staff.certificate);
+    
+    //  Remove all certificate files
+    if (staff.certificates && Array.isArray(staff.certificates)) {
+      staff.certificates.forEach(cert => {
+        if (fs.existsSync(cert)) {
+          fs.unlinkSync(cert);
+          console.log('Deleted staff certificate:', cert);
+        }
+      });
     }
     
     // Audit trail for staff deletion
@@ -338,7 +381,7 @@ exports.getStaffAuditTrail = async (req, res) => {
     }
 
     res.status(200).json({ success: true, data: auditTrail });
-
+     
   } catch (err) {
     console.error('Get staff audit trail error:', err);
     res.status(500).json({ success: false, msg: 'Server Error', error: err.message });

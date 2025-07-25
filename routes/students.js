@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer'); // Import multer directly
-const { imageFileFilter, pdfFileFilter } = require('../middleware/studentStaffUploads'); // Import individual components
-const createError = require('http-errors'); // Also needed for custom fileFilter error handling
+const { imageFileFilter, pdfFileFilter } = require('../middleware/studentStaffUploads');
+const createError = require('http-errors'); 
 const auth = require('../middleware/auth');
 const Student = require('../models/Student');
 const fs = require('fs');
@@ -69,93 +69,9 @@ const uploadMultipleFiles = multer({
 
 
 // Main student routes with consolidated file upload
-router.post('/', auth, uploadMultipleFiles, createStudentAndParent); // Now uses uploadMultipleFiles
-router.put('/:id', auth, uploadMultipleFiles, updateStudentAndParent); // Now uses uploadMultipleFiles
+router.post('/', auth, uploadMultipleFiles, createStudentAndParent); 
+router.put('/:id', auth, uploadMultipleFiles, updateStudentAndParent); 
 
-// You can remove or keep these separate upload routes based on your needs.
-// If you want all file uploads for a student to go through the POST/PUT /:id routes,
-// then these dedicated routes might become redundant for actual uploads.
-/*
-router.post('/upload-transcript/:id', auth, uploadTranscript.single('transcript'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
-    }
-
-    const student = await Student.findById(req.params.id);
-    if (!student) {
-      fs.unlinkSync(req.file.path);
-      return res.status(404).json({ success: false, message: 'Student not found' });
-    }
-
-    if (student.transcript && fs.existsSync(student.transcript)) {
-      fs.unlinkSync(student.transcript);
-    }
-
-    student.transcript = `uploads/transcripts/${req.file.filename}`;
-    await student.save();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Transcript uploaded successfully',
-      filePath: student.transcript
-    });
-
-  } catch (error) {
-    console.error('Upload transcript error:', error);
-    
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-
-    return res.status(500).json({
-      success: false,
-      message: 'Server error during transcript upload',
-      error: error.message
-    });
-  }
-});
-
-router.post('/upload-reportcard/:id', auth, uploadReportCard.single('reportCard'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
-    }
-
-    const student = await Student.findById(req.params.id);
-    if (!student) {
-      fs.unlinkSync(req.file.path);
-      return res.status(404).json({ success: false, message: 'Student not found' });
-    }
-
-    if (student.reportCard && fs.existsSync(student.reportCard)) {
-      fs.unlinkSync(student.reportCard);
-    }
-
-    student.reportCard = `uploads/reportcards/${req.file.filename}`;
-    await student.save();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Report card uploaded successfully',
-      filePath: student.reportCard
-    });
-
-  } catch (error) {
-    console.error('Upload report card error:', error);
-    
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-
-    return res.status(500).json({
-      success: false,
-      message: 'Server error during report card upload',
-      error: error.message
-    });
-  }
-});
-*/
 
 // Remove individual files
 router.delete('/remove-transcript/:id', auth, async (req, res) => {

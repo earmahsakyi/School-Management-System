@@ -115,16 +115,43 @@ const studentReducer = (state = initialState, action) => {
       };
 
     case UPDATE_STUDENT_SUCCESS:
+      // Handle both regular updates and promotion updates
+      let updatedStudent;
+      let message = 'Student updated successfully';
+      
+      // Check if payload has nested student data (regular update) or direct data (promotion update)
+      if (action.payload.data && action.payload.data.student) {
+        // Regular student update response structure
+        updatedStudent = action.payload.data.student;
+      } else if (action.payload.data) {
+        // Promotion update response structure (direct student object)
+        updatedStudent = action.payload.data;
+      } else {
+        // Fallback - use the entire payload as student data
+        updatedStudent = action.payload;
+      }
+      
+      // Extract message if available
+      if (action.payload.message) {
+        message = action.payload.message;
+      } else if (action.payload.msg) {
+        message = action.payload.msg;
+      }
+      
       return {
         ...state,
         loading: false,
-        students: state.students.map(student =>
-          student._id === payload.data.student._id 
-            ? { ...student, ...payload.data.student }
+        // Update the single student if it exists and IDs match
+        student: state.student && state.student._id === updatedStudent._id 
+          ? { ...state.student, ...updatedStudent }
+          : state.student,
+        // Update the student in the students array with null checks
+        students: state.students.map(student => 
+          student && student._id === updatedStudent._id 
+            ? { ...student, ...updatedStudent }
             : student
-        ),
-        student: payload.data.student,
-        message: 'Student updated successfully',
+        ).filter(student => student !== undefined), // Filter out any undefined entries
+        message,
         error: null
       };
 

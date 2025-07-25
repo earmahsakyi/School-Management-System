@@ -52,3 +52,4 @@ lastLogin: { type: Date },
 },{ timestamps: true });
 
 module.exports = mongoose.model('Admin', AdminSchema);
+          

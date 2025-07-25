@@ -1,146 +1,3 @@
-const puppeteer = require('puppeteer');
-const fs = require('fs');
-const path = require('path');
-
-const generatePdf = async (reportCardData) => {
-  let browser;
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-
-    const logo1Base64 = fs.readFileSync(path.join(__dirname, '../logo1.png'), 'base64');
-    const logo2Base64 = fs.readFileSync(path.join(__dirname, '../logo2.png'), 'base64');
-    const page = await browser.newPage();
-
-    // Extract student and grades
-    const student = reportCardData.data[0].student;
-    const grades = reportCardData.data;
-
-    // Summary calculations
-    const totalDaysPresent = grades.reduce((sum, g) => sum + (g.attendance?.daysPresent || 0), 0);
-    const totalDaysAbsent = grades.reduce((sum, g) => sum + (g.attendance?.daysAbsent || 0), 0);
-    const totalTimesTardy = grades.reduce((sum, g) => sum + (g.attendance?.timesTardy || 0), 0);
-    const attendanceRate = totalDaysPresent + totalDaysAbsent > 0 ? 
-      ((totalDaysPresent / (totalDaysPresent + totalDaysAbsent)) * 100).toFixed(1) : '0.0';
-    
-    const sortedGrades = [...grades].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const mostRecentConduct = sortedGrades[0]?.conduct || 'Good';
-    const overallAverage = (
-      grades.reduce((sum, g) => sum + (g.overallAverage || 0), 0) / grades.length
-    ).toFixed(2);
-
-    // Determine department and report title
-    const gradeLevel = parseInt(student.gradeLevel);
-    let department = student.department || 'JHS';
-    let reportTitle = '';
-
-    if (gradeLevel >= 7 && gradeLevel <= 9) {
-      department = 'JHS';
-      reportTitle = 'Junior High Report Card';
-    } else if (gradeLevel >= 10 && gradeLevel <= 12) {
-      reportTitle = 'Senior High Report Card';
-    }
-
-    // Define subjects per department
-    let subjectOrder = [];
-    if (department === 'JHS') {
-      subjectOrder = [
-        "English", "Mathematics", "General Science", "Social Studies", "Civics",
-        "Literature", "Religious and Moral Education (RME)", "Physical Education (PE)",
-        "Agriculture", "French", "Automotive", "Electricity"
-      ];
-    } else if (department === 'Arts') {
-      subjectOrder = [
-        "English", "Mathematics", "Literature", "History", "Economics",
-        "Computer Science", "Geography", "Civics", "Biology", "R.O.T.C",
-        "Agriculture"
-      ];
-    } else if (department === 'Science') {
-      subjectOrder = [
-        "English", "Mathematics", "Biology", "Chemistry", "Physics", "Economics", "R.O.T.C",
-        "Computer Science", "Agriculture", "Civics"
-      ];
-    }
-
-    // Organize grades by subject
-    const gradesBySubject = {};
-    grades.forEach(gradeEntry => {
-      gradeEntry.subjects.forEach(subjectScore => {
-        const subject = subjectScore.subject;
-        if (!gradesBySubject[subject]) {
-          gradesBySubject[subject] = {
-            '1st': '', '2nd': '', '3rd': '',
-            'Sem. Exam': '', 'Sem. Ave': ''
-          };
-        }
-
-        const scores = subjectScore.scores;
-        if (gradeEntry.term === '1') {
-          gradesBySubject[subject]['1st'] = scores.period1 ?? '';
-          gradesBySubject[subject]['2nd'] = scores.period2 ?? '';
-          gradesBySubject[subject]['3rd'] = scores.period3 ?? '';
-        } else if (gradeEntry.term === '2') {
-          gradesBySubject[subject]['1st'] = scores.period4 ?? '';
-          gradesBySubject[subject]['2nd'] = scores.period5 ?? '';
-          gradesBySubject[subject]['3rd'] = scores.period6 ?? '';
-        }
-
-        gradesBySubject[subject]['Sem. Exam'] = scores.semesterExam ?? '';
-        gradesBySubject[subject]['Sem. Ave'] = subjectScore.semesterAverage ?? '';
-      });
-    });
-
-    // Generate promotion statement with checkboxes
-    const getPromotionCheckboxes = () => {
-      const status = student.promotionStatus;
-      return {
-        promoted: status === 'Promoted' ? 'checked' : '',
-        conditional: status === 'Conditional Promotion' ? 'checked' : '',
-        repeat: status === 'Not Promoted' ? 'checked' : '',
-        notEnroll: status === 'Asked Not to Enroll' ? 'checked' : ''
-      };
-    };
-
-    const checkboxes = getPromotionCheckboxes();
-
-    // Helper function to get grade class
-    const getGradeClass = (score) => {
-      if (!score || score === '') return '';
-      const num = parseFloat(score);
-      if (num >= 90) return 'grade-a';
-      if (num >= 80) return 'grade-b';
-      if (num >= 70) return 'grade-c';
-      if (num >= 60) return 'grade-d';
-      return 'grade-f';
-    };
-
-    const getOverallGradeClass = (average) => {
-      const num = parseFloat(average);
-      if (num >= 90) return 'grade-a';
-      if (num >= 80) return 'grade-b';
-      if (num >= 70) return 'grade-c';
-      if (num >= 60) return 'grade-d';
-      return 'grade-f';
-    };
-
-    // Generate subject rows with grade classes
-    const subjectRows = subjectOrder.map(subject => {
-      const s = gradesBySubject[subject] || {};
-      return `
-        <tr>
-          <td class="subject-cell">${subject}</td>
-          <td class="grade-cell ${getGradeClass(s['1st'])}">${s['1st']}</td>
-          <td class="grade-cell ${getGradeClass(s['2nd'])}">${s['2nd']}</td>
-          <td class="grade-cell ${getGradeClass(s['3rd'])}">${s['3rd']}</td>
-          <td class="grade-cell ${getGradeClass(s['Sem. Exam'])}">${s['Sem. Exam']}</td>
-          <td class="grade-cell ${getGradeClass(s['Sem. Ave'])}">${s['Sem. Ave']}</td>
-        </tr>
-      `;
-    }).join('');
-
-    const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -600,34 +457,30 @@ const generatePdf = async (reportCardData) => {
         <div><strong>F:</strong> Below 60% (Failing)</div>
       </div>
     </div>
-     <div class="page-break"></div>
 
-      <div>
-        <h3 style="text-align: center; color: rgb(32, 32, 204); margin: 8mm 0;">The Ministry of Education</h3>
+    <h3 style="text-align: center; color: rgb(32, 32, 204); margin: 8mm 0;">The Ministry of Education</h3>
+    
+    <table style="margin-bottom: 8mm;">
+      <thead>
+        <tr>
+          <th style="width: 20%;">REPORTING PERIOD</th>
+          <th style="width: 40%;">PARENT/GUARDIAN SIGNATURE</th>
+          <th style="width: 40%;">CLASS SPONSOR SIGNATURE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>1st Period</strong></td><td style="height: 30px;"></td><td style="height: 30px;"></td></tr>
+        <tr><td><strong>2nd Period</strong></td><td style="height: 30px;"></td><td style="height: 30px;"></td></tr>
+        <tr><td><strong>3rd Period</strong></td><td style="height: 30px;"></td><td style="height: 30px;"></td></tr>
+        <tr><td><strong>4th Period</strong></td><td style="height: 30px;"></td><td style="height: 30px;"></td></tr>
+        <tr><td><strong>5th Period</strong></td><td style="height: 30px;"></td><td style="height: 30px;"></td></tr>
+        <tr><td><strong>6th Period</strong></td><td style="height: 30px;"></td><td style="height: 30px;"></td></tr>
+      </tbody>
+    </table>
 
-        <table style="margin-bottom: 8mm;">
-          <thead>
-            <tr>
-              <th style="width: 20%;">REPORTING PERIOD</th>
-              <th style="width: 40%;">PARENT/GUARDIAN SIGNATURE</th>
-              <th style="width: 40%;">CLASS SPONSOR SIGNATURE</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td><strong>1st Period</strong></td><td style="height: 30px;"></td><td style="height: 30px;"></td></tr>
-            <tr><td><strong>2nd Period</strong></td><td style="height: 30px;"></td><td style="height: 30px;"></td></tr>
-            <tr><td><strong>3rd Period</strong></td><td style="height: 30px;"></td><td style="height: 30px;"></td></tr>
-            <tr><td><strong>4th Period</strong></td><td style="height: 30px;"></td><td style="height: 30px;"></td></tr>
-            <tr><td><strong>5th Period</strong></td><td style="height: 30px;"></td><td style="height: 30px;"></td></tr>
-            <tr><td><strong>6th Period</strong></td><td style="height: 30px;"></td><td style="height: 30px;"></td></tr>
-          </tbody>
-        </table>
-
-        <h4 style="text-align: center; color: #28a745; font-style: italic;">
-          "Accelerated Education for Accelerated Development"
-        </h4>
-      </div>
-
+    <h4 style="text-align: center; color: #28a745; font-style: italic;">
+      "Accelerated Education for Accelerated Development"
+    </h4>
 
     <!-- Page 3: Subject Grades & Summary -->
     <div class="page-break"></div>
@@ -692,22 +545,3 @@ const generatePdf = async (reportCardData) => {
   </div>
 </body>
 </html>
-    `;
-
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' }
-    });
-
-    await browser.close();
-    return pdfBuffer;
-  } catch (error) {
-    console.error('Error generating PDF:', error);
-    if (browser) await browser.close();
-    throw error;
-  }
-};
-
-module.exports = generatePdf;

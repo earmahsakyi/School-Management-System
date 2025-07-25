@@ -1,6 +1,6 @@
 const Student = require('../models/Student');
 const Grade = require('../models/Grade');
-const generatePdf = require('../utils/generatePdf');
+const generatePdf = require('../utils/generatePDF');
 
 // @desc    Get report card data for a student
 // @route   GET /api/reportcard/:studentId/:academicYear/:term?
@@ -50,7 +50,12 @@ exports.getReportCardData = async (req, res) => {
           gender: student.gender,
           gradeLevel: student.gradeLevel,
           admissionNumber: student.admissionNumber,
-          promotionStatus: student.promotionStatus
+          promotionStatus: student.promotionStatus,
+          department: student.department,
+          classSection: student.classSection,
+          dob: student.dob,
+          promotionStatus: student.promotionStatus,
+          promotedToGrade: student.promotedToGrade,
         }
       })),
       pagination: {

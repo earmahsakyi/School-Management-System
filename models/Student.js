@@ -25,6 +25,11 @@ const studentSchema = new mongoose.Schema({
     required: [true, "Place of birth is required"],
     trim: true
   },
+    currentAddress: {
+    type: String,
+    required: [true, "Current Address is required"],
+    trim: true
+  },
   gender: {
     type: String,
     enum: ["Male", "Female", "Other"],
@@ -73,11 +78,15 @@ const studentSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Parent'
   },
-  promotionStatus: {
-    type: String,
-    enum: ['Promoted', 'Not Promoted', 'Conditional Promotion'],
-    default: 'Not Promoted'
-  }
+promotionStatus: {
+  type: String,
+  enum: ['Promoted', 'Not Promoted', 'Conditional Promotion', 'Asked Not to Enroll'],
+  default: 'Not Promoted'
+},
+promotedToGrade: {
+  type: String, // example: "9"
+  default: null
+}
 
 }, { timestamps: true });
 

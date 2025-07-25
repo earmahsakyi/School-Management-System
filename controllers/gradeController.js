@@ -77,7 +77,8 @@ const createGrade = async (req, res) => {
     // Add detailed debugging logs
   
 
-    const { student, academicYear, term, gradeLevel, department, subjects } = req.body;
+    const { student, academicYear, term, gradeLevel, department, subjects, attendance, conduct } = req.body;
+
 
     // Enhanced validation with detailed error messages
     if (!student) {
@@ -191,26 +192,43 @@ const createGrade = async (req, res) => {
 
     // Calculate averages with improved error handling
     const gradeData = calculateAverages({
-      student,
-      academicYear,
-      term,
-      gradeLevel: gradeLevel || studentExists.gradeLevel,
-      department: department || studentExists.department,
-      subjects: subjects.map(s => ({
-        ...s,
-        scores: {
-          period1: s.scores.period1 !== undefined && s.scores.period1 !== '' ? parseFloat(s.scores.period1) || null : null,
-          period2: s.scores.period2 !== undefined && s.scores.period2 !== '' ? parseFloat(s.scores.period2) || null : null,
-          period3: s.scores.period3 !== undefined && s.scores.period3 !== '' ? parseFloat(s.scores.period3) || null : null,
-          period4: s.scores.period4 !== undefined && s.scores.period4 !== '' ? parseFloat(s.scores.period4) || null : null,
-          period5: s.scores.period5 !== undefined && s.scores.period5 !== '' ? parseFloat(s.scores.period5) || null : null,
-          period6: s.scores.period6 !== undefined && s.scores.period6 !== '' ? parseFloat(s.scores.period6) || null : null,
-          semesterExam: s.scores.semesterExam !== undefined && s.scores.semesterExam !== '' ? parseFloat(s.scores.semesterExam) || 0 : 0
-        }
-      }))
-    }, term);
+  student,
+  academicYear,
+  term,
+  gradeLevel: gradeLevel || studentExists.gradeLevel,
+  department: department || studentExists.department,
+  attendance: attendance || { daysPresent: 0, daysAbsent: 0, timesTardy: 0 },
+  conduct: conduct || 'Good',
+  subjects: subjects.map(s => ({
+    ...s,
+    scores: {
+      period1: s.scores.period1 !== undefined && s.scores.period1 !== '' ? parseFloat(s.scores.period1) || null : null,
+      period2: s.scores.period2 !== undefined && s.scores.period2 !== '' ? parseFloat(s.scores.period2) || null : null,
+      period3: s.scores.period3 !== undefined && s.scores.period3 !== '' ? parseFloat(s.scores.period3) || null : null,
+      period4: s.scores.period4 !== undefined && s.scores.period4 !== '' ? parseFloat(s.scores.period4) || null : null,
+      period5: s.scores.period5 !== undefined && s.scores.period5 !== '' ? parseFloat(s.scores.period5) || null : null,
+      period6: s.scores.period6 !== undefined && s.scores.period6 !== '' ? parseFloat(s.scores.period6) || null : null,
+      semesterExam: s.scores.semesterExam !== undefined && s.scores.semesterExam !== '' ? parseFloat(s.scores.semesterExam) || 0 : 0
+    }
+  }))
+}, term);
+
+
 
     
+if (attendance && typeof attendance !== 'object') {
+  return res.status(400).json({
+    success: false,
+    message: 'Invalid attendance format'
+  });
+}
+
+if (conduct && !["Excellent", "Good", "Satisfactory", "Needs Improvement"].includes(conduct)) {
+  return res.status(400).json({
+    success: false,
+    message: 'Invalid conduct value'
+  });
+}
 
     const grade = new Grade(gradeData);
     await grade.save();
@@ -348,14 +366,14 @@ const getStudentGrades = async (req, res) => {
     res.status(500).json({
       success: false,
       message: `Internal server error: ${error.message}`
-    });
+    });  
   }
 };
 
 // Update a grade record
 const updateGrade = async (req, res) => {
   try {
-    const { subjects, department } = req.body;
+    const { subjects, department, attendance, conduct } = req.body;
     
     const grade = await Grade.findById(req.params.id);
     if (!grade) {
@@ -404,6 +422,17 @@ const updateGrade = async (req, res) => {
     // Update department if provided
     if (department !== undefined) {
       grade.department = department;
+    }
+
+    // Add attendance and conduct updates here
+    if (attendance && typeof attendance === 'object') {
+      grade.attendance.daysPresent = attendance.daysPresent ?? grade.attendance.daysPresent;
+      grade.attendance.daysAbsent = attendance.daysAbsent ?? grade.attendance.daysAbsent;
+      grade.attendance.timesTardy = attendance.timesTardy ?? grade.attendance.timesTardy;
+    }
+
+    if (conduct && ["Excellent", "Good", "Satisfactory", "Needs Improvement"].includes(conduct)) {
+      grade.conduct = conduct;
     }
 
     // Recalculate averages

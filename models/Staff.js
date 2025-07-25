@@ -62,11 +62,48 @@ const staffSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  // Optional uploads
-  certificate: {
+
+  currentAddress: {
     type: String,
-    default: ''  
+    default: ''
   },
+  institutionAttended: {
+    name:{ type: String},
+    startYear: { type: Number },
+    endYear: { type: Number }
+  },
+  nationalID: {
+    type: String,
+    default: ''
+  },
+  ssn: {
+    type: Number,
+    default: null
+  },
+  payrollNumber: {
+    type: Number,
+    default: null
+  },
+  yearOfEmployment: {
+    type: Number,
+    default: null
+  },
+
+   nationality: {
+    type: String,
+    default: ''
+  },
+   maritalStatus: {
+    type: String,
+    enum: ['Married', 'Single', 'Divorced', 'Other'],
+    default: ''
+  },
+
+  certificates: {
+    type: [String], // e.g. ["WASSCE", "Diploma in Education"]
+    default: []
+  },
+
   leaveRecords: [
     {
       type: new mongoose.Schema({

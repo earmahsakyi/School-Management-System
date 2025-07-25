@@ -11,17 +11,17 @@ const parentSchema = new mongoose.Schema({
     required: [true, "Phone number is required"],
     trim: true
   },
-  occupation:{
-    type: String,
+  occupation:{  
+    type: String,  
     required: [true, "Occupation  is required"],
     trim: true
   },
   email: {
     type: String,
     unique: true,
-    required: [true, "Email is required"],
     lowercase: true,
-    trim: true
+    trim: true,
+    default: '',
   },
   students: [{
     type: mongoose.Schema.Types.ObjectId,

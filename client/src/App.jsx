@@ -14,12 +14,15 @@ import ResetPassword from './components/auth/ResetPassword';
 import AdminProfileForm from './components/auth/AdminProfileForm';
 import Staff from './components/staff/Staff';
 import AdminPage from './components/dashboard/AdminPage';
-import StudentReportCard from './components/student/StudentReportCard';
 import AdminPromotionView from './components/auth/AdminPromotionView';
 import GradesPage from './components/grade/GradePage';
 import GradeSection from './components/grade/GradeSection';
 import ClassPerformancePage from './components/grade/ClassPerfomancePage';
+import RoosterSummary from './components/staff/RosterSummary';
+import ReportCardsList from './components/student/ReportCardList';
+import TranscriptList from './components/student/TranscriptList';
 import StudentPerformancePage from './components/grade/StudentPerformancePage';
+import MasterGradeSheet from './components/staff/MasterGradeSheet';
  import { loadUser } from './actions/authAction'; 
  
 
@@ -49,8 +52,11 @@ const AppInner = () => {
       <Route path="/class-performance" element={<PrivateRoute element={ClassPerformancePage} />} />
       <Route path="/student-performance" element={<PrivateRoute element={StudentPerformancePage} />} />
       <Route path="/grades" element={<PrivateRoute element={GradesPage} />} />
-      <Route path="/report-card/:studentId/:academicYear" element={<PrivateRoute element={StudentReportCard} />} />
+      <Route path="/transcript" element={<PrivateRoute element={TranscriptList} />} />
       <Route path="/admin/promotion/:studentId" element={<PrivateRoute element={AdminPromotionView} />} />
+      <Route path="reportCards" element={<PrivateRoute element={ReportCardsList} />} />
+      <Route path="grade-sheet" element={<PrivateRoute element={MasterGradeSheet} />} />
+      <Route path="roster-summary" element={<PrivateRoute element={RoosterSummary} />} />
  
     </Routes>
   );

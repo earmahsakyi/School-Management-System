@@ -260,7 +260,7 @@ const ForgotPassword = () => {
                 <motion.span 
                   className="text-blue-400 hover:text-blue-300 cursor-pointer font-semibold"
                   whileHover={{ scale: 1.05 }}
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/login')}
                 >
                   Login
                 </motion.span>

@@ -22,7 +22,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateStudentAndParent } from '@/actions/studentAction';
-import { Camera, RotateCcw, Check, X, FileText, Trash2 } from 'lucide-react';
+import { Camera, RotateCcw, Check, X, Upload, FileText, Trash2 } from 'lucide-react';
 
 export function EditStudentModal({ 
   open, 
@@ -41,6 +41,7 @@ export function EditStudentModal({
       lastName: '',
       dob: '',
       placeOfBirth: '',
+      currentAddress: '',
       gender: '',
       grade: '',
       department: '',
@@ -50,6 +51,7 @@ export function EditStudentModal({
       guardianEmail: '',
       guardianPhone: '',
       guardianOccupation: '',
+      
     }
   });
   
@@ -60,6 +62,8 @@ export function EditStudentModal({
   const [capturedImage, setCapturedImage] = useState(null);
   const [facingMode, setFacingMode] = useState('user');
   const [existingPhotoUrl, setExistingPhotoUrl] = useState(null);
+  const [uploadedPhotoFile, setUploadedPhotoFile] = useState(null);
+  const [uploadedPhotoPreview, setUploadedPhotoPreview] = useState(null);
 
   // Document states
   const [transcriptFile, setTranscriptFile] = useState(null);
@@ -96,6 +100,7 @@ export function EditStudentModal({
       setValue('grade', studentData.gradeLevel?.toString() || '');
       setValue('department', studentData.department || '');
       setValue('classSection', studentData.classSection || '');
+      setValue('currentAddress', studentData.currentAddress || '');
       setValue('lastSchoolAttended', studentData.lastSchoolAttended || '');
       
       // Set form values for parent/guardian data
@@ -129,12 +134,14 @@ export function EditStudentModal({
         gender: '',
         lastSchoolAttended: '',
         grade: '',
+        currentAddress: '',
         department: '',
         classSection: '',
         guardianName: '',
         guardianEmail: '',
         guardianPhone: '',
         guardianOccupation: '',
+
       });
       setCapturedImage(null);
       setExistingPhotoUrl(null);
@@ -184,6 +191,47 @@ export function EditStudentModal({
       }
     }
   };
+
+
+
+  const handlePhotoUpload = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (JPG, PNG, etc.)');
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should not exceed 5MB');
+      return;
+    }
+    
+    setUploadedPhotoFile(file);
+    
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setUploadedPhotoPreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+    
+    // Clear webcam captured image if exists
+    setCapturedImage(null);
+    // For EditStudentModal, also clear existing photo URL
+    if (typeof setExistingPhotoUrl !== 'undefined') {
+      setExistingPhotoUrl(null);
+    }
+  }
+};
+
+// Remove uploaded photo
+const removeUploadedPhoto = () => {
+  setUploadedPhotoFile(null);
+  setUploadedPhotoPreview(null);
+};
 
   // Remove selected file
   const removeFile = (fileType) => {
@@ -239,6 +287,7 @@ export function EditStudentModal({
       formData.append('gender', data.gender);
       formData.append('gradeLevel', data.grade);
       formData.append('department', data.department || '');
+      formData.append('currentAddress', data.currentAddress || '');
       formData.append('classSection', data.classSection || '');
       formData.append('lastSchoolAttended', data.lastSchoolAttended || '');
       
@@ -249,9 +298,11 @@ export function EditStudentModal({
       formData.append('occupation', data.guardianOccupation);
       
       // Add captured photo if available
-      if (capturedImage) {
+       if (capturedImage) {
         const photoFile = base64ToFile(capturedImage, `student_${Date.now()}.jpg`);
         formData.append('photo', photoFile);
+      } else if (uploadedPhotoFile) {
+      formData.append('photo', uploadedPhotoFile);
       }
 
       // Add transcript file if selected
@@ -290,6 +341,7 @@ export function EditStudentModal({
         grade: '',
         department: '',
         classSection: '',
+        currentAddress:'',
         lastSchoolAttended:'',
         guardianName: '',
         guardianEmail: '',
@@ -303,6 +355,8 @@ export function EditStudentModal({
       setExistingTranscript(null);
       setExistingReportCard(null);
       onOpenChange(false);
+      setUploadedPhotoFile(null);
+      setUploadedPhotoPreview(null);
       
     } catch (err) {
       console.error('Error saving student:', err);
@@ -321,10 +375,11 @@ export function EditStudentModal({
 
   // Get current photo to display
   const getCurrentPhoto = () => {
-    if (capturedImage) return capturedImage;
-    if (existingPhotoUrl) return existingPhotoUrl;
-    return null;
-  };
+  if (capturedImage) return capturedImage;
+  if (uploadedPhotoPreview) return uploadedPhotoPreview;
+  if (existingPhotoUrl) return existingPhotoUrl;
+  return null;
+};
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -343,7 +398,7 @@ export function EditStudentModal({
         
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Photo Section */}
-          <div className="space-y-4">
+              <div className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground border-b pb-2">
               Student Photo
             </h3>
@@ -354,15 +409,35 @@ export function EditStudentModal({
                   <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
                     <Camera className="h-8 w-8 text-gray-400" />
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowWebcam(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <Camera className="h-4 w-4" />
-                    Take Photo
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowWebcam(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <Camera className="h-4 w-4" />
+                      Take Photo
+                    </Button>
+                    <div className="relative">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        onClick={() => document.getElementById('photo-upload').click()}
+                      >
+                        <Upload className="h-4 w-4" />
+                        Upload Photo
+                      </Button>
+                      <input
+                        id="photo-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -422,7 +497,7 @@ export function EditStudentModal({
                       alt="Student photo"
                       className="w-32 h-32 object-cover rounded-lg border"
                     />
-                    {capturedImage && (
+                    {(capturedImage || uploadedPhotoPreview) && (
                       <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
                         <Check className="h-3 w-3" />
                       </div>
@@ -438,8 +513,28 @@ export function EditStudentModal({
                       className="flex items-center gap-2"
                     >
                       <Camera className="h-4 w-4" />
-                      {capturedImage || existingPhotoUrl ? 'Change Photo' : 'Take Photo'}
+                      Take New Photo
                     </Button>
+                    
+                    <div className="relative">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                        onClick={() => document.getElementById('photo-upload').click()}
+                      >
+                        <Upload className="h-4 w-4" />
+                        Upload New Photo
+                      </Button>
+                      <input
+                        id="photo-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                    </div>
                     
                     {capturedImage && (
                       <Button
@@ -460,7 +555,11 @@ export function EditStudentModal({
                       size="sm"
                       onClick={() => {
                         setCapturedImage(null);
-                        removeExistingPhoto();
+                        removeUploadedPhoto();
+                        // For EditStudentModal only
+                        if (typeof removeExistingPhoto !== 'undefined') {
+                          removeExistingPhoto();
+                        }
                       }}
                       className="flex items-center gap-2"
                     >
@@ -607,6 +706,18 @@ export function EditStudentModal({
                   <p className="text-sm text-destructive">{errors.dob.message}</p>
                 )}
               </div>
+
+               <div className="space-y-2">
+              <Label htmlFor="currentAddress">Current Address</Label>
+              <Input
+                id="currentAddress"
+                {...register('currentAddress', { required: 'Current Address is required' })}
+                placeholder="Enter current Address"
+              />
+              {errors.currentAddress && (
+                  <p className="text-sm text-destructive">{errors.currentAddress.message}</p>
+                )}
+            </div>
               
               <div className="space-y-2">
                 <Label htmlFor="placeOfBirth">Place of Birth</Label>
@@ -781,6 +892,7 @@ export function EditStudentModal({
                   grade: '',
                   department: '',
                   classSection: '',
+                  currentAddress: '',
                   lastSchoolAttended: '',
                   guardianName: '',
                   guardianEmail: '',
@@ -795,6 +907,8 @@ export function EditStudentModal({
                 setExistingReportCard(null);
                 setShowWebcam(false);
                 onOpenChange(false);
+                setUploadedPhotoFile(null);
+                setUploadedPhotoPreview(null);
               }}
               disabled={loading}
             >

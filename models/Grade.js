@@ -8,7 +8,8 @@ const subjectScoreSchema = new mongoose.Schema({
       "English", "Mathematics", "General Science", "Social Studies", "Civics",
       "Literature", "Religious and Moral Education (RME)", "Physical Education (PE)",
       "Agriculture", "Computer Science", "History", "Biology", "Economics",
-      "Geography", "R.O.T.C", "French", "Chemistry", "Physics"
+      "Geography", "R.O.T.C", "French", "Chemistry", "Physics","Automotive","Electricity",
+      
     ]
   },
   scores: {

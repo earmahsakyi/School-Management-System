@@ -1,121 +1,208 @@
-// src/components/admin/ReportCardsList.jsx
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
+import { DashboardLayout } from '../dashboard/DashboardLayout';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Download } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import {  Download, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getAllStudents, clearStudentErrors } from '../../actions/studentAction';
+import { toast } from 'react-hot-toast';
 
-const ReportCardsList = ({ students }) => {
+const ReportCardsList = () => {
+  const dispatch = useDispatch();
+  const { students, loading, error } = useSelector(state => state.student);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [academicYear, setAcademicYear] = useState('2024/2025');
-  const [selectedTerm, setSelectedTerm] = useState('');
+  const [selectedTerm, setSelectedTerm] = useState('all');
+  const [downloadingId, setDownloadingId] = useState(null);
 
-  const filteredStudents = students.filter(student => 
-    student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Handle PDF download
+  const handleDownload = async (studentId, academicYear, term, studentName) => {
+    try {
+      setDownloadingId(studentId + term);
+      let url = `/api/reportcard/${studentId}/${encodeURIComponent(academicYear)}`;
+      if (term) {
+        url += `/${term}`;
+      }
+
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to download report card');
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      
+      const termText = term ? `_Term${term}` : '_Annual';
+      link.download = `${studentName}_ReportCard_${academicYear.replace('/', '-')}${termText}.pdf`;
+      
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast.error(`Failed to download report card: ${error.message}`);
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  // Fetch students on component mount
+  useEffect(() => {
+    dispatch(getAllStudents());
+
+    // Clear errors when unmounting
+    return () => {
+      dispatch(clearStudentErrors());
+    };
+  }, [dispatch]);
+
+  // Filter students based on search term
+  const filteredStudents = students?.filter(student =>
+    student?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student?.admissionNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold">Student Report Cards</h1>
-        
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+    <DashboardLayout>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="container mx-auto px-4 py-8 max-w-7xl"
+      >
+        <h1 className="text-3xl font-bold text-foreground mb-6">Report Cards</h1>
+
+        <div className="flex items-center space-x-4 mb-6">
+          <div className="flex-1">
             <Input
-              placeholder="Search students..."
+              type="text"
+              placeholder="Search student by name or admission number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full"
+              className="w-full"
             />
           </div>
-          
-          <Select value={academicYear} onValueChange={setAcademicYear}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Academic Year" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="2023/2024">2023/2024</SelectItem>
-              <SelectItem value="2024/2025">2024/2025</SelectItem>
-              <SelectItem value="2025/2026">2025/2026</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Select value={selectedTerm} onValueChange={setSelectedTerm}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="All Terms" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Terms</SelectItem>
-              <SelectItem value="1">Term 1</SelectItem>
-              <SelectItem value="2">Term 2</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="w-48">
+            <Select value={academicYear} onValueChange={setAcademicYear}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select Academic Year" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="2023/2024">2023/2024</SelectItem>
+                <SelectItem value="2024/2025">2024/2025</SelectItem>
+                <SelectItem value="2025/2026">2025/2026</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-32">
+            <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select Term" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Terms</SelectItem>
+                <SelectItem value="1">Term 1</SelectItem>
+                <SelectItem value="2">Term 2</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Student</TableHead>
-            <TableHead>Grade</TableHead>
-            <TableHead>Admission No.</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredStudents.map((student) => (
-            <TableRow key={student._id}>
-              <TableCell className="font-medium">
-                {student.firstName} {student.lastName}
-              </TableCell>
-              <TableCell>Grade {student.gradeLevel}</TableCell>
-              <TableCell>{student.admissionNumber}</TableCell>
-              <TableCell className="text-right space-x-2">
-                {selectedTerm ? (
-                  <Button asChild size="sm" variant="outline">
-                    <Link 
-                      to={`/admin/students/${student._id}/report/${encodeURIComponent(academicYear)}/${selectedTerm}`}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </Link>
-                  </Button>
-                ) : (
-                  <>
-                    <Button asChild size="sm" variant="outline">
-                      <Link 
-                        to={`/admin/students/${student._id}/report/${encodeURIComponent(academicYear)}/1`}
+        {loading ? (
+          <div className="flex justify-center items-center h-40">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2 text-muted-foreground">Loading students...</span>
+          </div>
+        ) : error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : filteredStudents.length === 0 ? (
+          <Alert>
+            <AlertDescription>No students found for the current search/filters.</AlertDescription>
+          </Alert>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Admission #</TableHead>
+                <TableHead>Student Name</TableHead>
+                <TableHead>Grade Level</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStudents.map((student) => (
+                <TableRow key={student._id}>
+                  <TableCell>{student.admissionNumber}</TableCell>
+                  <TableCell>{`${student.firstName} ${student.lastName}`}</TableCell>
+                  <TableCell>{student.gradeLevel}</TableCell>
+                  <TableCell className="text-right flex justify-end gap-2">
+                    {selectedTerm !== 'all' ? ( // Check if a specific term is selected
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleDownload(student._id, academicYear, selectedTerm, `${student.firstName}_${student.lastName}`)}
+                        disabled={downloadingId === student._id + selectedTerm}
                       >
-                        Term 1
-                      </Link>
-                    </Button>
-                    <Button asChild size="sm" variant="outline">
-                      <Link 
-                        to={`/admin/students/${student._id}/report/${encodeURIComponent(academicYear)}/2`}
-                      >
-                        Term 2
-                      </Link>
-                    </Button>
-                    <Button asChild size="sm">
-                      <Link 
-                        to={`/admin/students/${student._id}/report/${encodeURIComponent(academicYear)}`}
-                      >
-                        Annual
-                      </Link>
-                    </Button>
-                  </>
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+                        {downloadingId === student._id + selectedTerm ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="mr-2 h-4 w-4" />
+                        )}
+                        Download
+                      </Button>
+                    ) : (
+                      // Display options for Term 1, Term 2, and Annual if "All Terms" is selected
+                      <>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDownload(student._id, academicYear, '1', `${student.firstName}_${student.lastName}`)}
+                          disabled={downloadingId === student._id + '1'}
+                        >
+                          {downloadingId === student._id + '1' ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          Term 1
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDownload(student._id, academicYear, '2', `${student.firstName}_${student.lastName}`)}
+                          disabled={downloadingId === student._id + '2'}
+                        >
+                          {downloadingId === student._id + '2' ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          Term 2
+                        </Button>
+                        <Button 
+                          size="sm"
+                          onClick={() => handleDownload(student._id, academicYear, null, `${student.firstName}_${student.lastName}`)}
+                          disabled={downloadingId === student._id + 'null'}
+                        >
+                          {downloadingId === student._id + 'null' ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          Annual
+                        </Button>
+                      </>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </motion.div>
+    </DashboardLayout>
   );
 };
 

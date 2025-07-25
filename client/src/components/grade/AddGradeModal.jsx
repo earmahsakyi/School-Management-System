@@ -21,7 +21,7 @@ const commonSubjects = [
   "English", "Mathematics", "General Science", "Social Studies", "Civics",
   "Literature", "Religious and Moral Education (RME)", "Physical Education (PE)",
   "Agriculture", "Computer Science", "History", "Biology", "Economics",
-  "Geography", "R.O.T.C", "French", "Chemistry", "Physics"
+  "Geography", "R.O.T.C", "French", "Chemistry", "Physics","Automotive","Electricity"
 ];
 
 const AddGradeModal = ({ open, onOpenChange, onSuccess }) => {
@@ -39,6 +39,12 @@ const AddGradeModal = ({ open, onOpenChange, onSuccess }) => {
       studentId: '',
       gradeLevel: '',
       department: '',
+      conduct: '',
+       attendance: {
+    daysPresent: '',
+    daysAbsent: '',
+    timesTardy: ''
+       },
       subjects: [{ // Ensure one subject field by default
         subject: '',
         scores: {
@@ -209,16 +215,14 @@ const AddGradeModal = ({ open, onOpenChange, onSuccess }) => {
         gradeLevel: data.gradeLevel || selectedStudent?.gradeLevel,
         department: data.department || selectedStudent?.department,
         subjects: processedSubjects,
-        overallAverage: parseFloat(calculateOverallAverage()) || 0
+        overallAverage: parseFloat(calculateOverallAverage()) || 0,
+        attendance: {
+        daysPresent: data.attendance.daysPresent || 0,
+        daysAbsent: data.attendance.daysAbsent || 0,
+        timesTardy: data.attendance.timesTardy || 0
+       },
+        conduct: data.conduct || "Good"
       };
-
-      console.log('=== GRADE CREATION DEBUG ===');
-      console.log('Selected Student:', selectedStudent);
-      console.log('Form Data:', data);
-      console.log('Watched Subjects:', JSON.stringify(watchedSubjects, null, 2));
-      console.log('Processed Subjects:', JSON.stringify(processedSubjects, null, 2));
-      console.log('Final Payload:', JSON.stringify(payload, null, 2));
-      console.log('========================');
 
       await dispatch(createGrade(payload));
       toast.success("Grade record added successfully.");
@@ -243,6 +247,12 @@ const AddGradeModal = ({ open, onOpenChange, onSuccess }) => {
         studentId: '',
         gradeLevel: '',
         department: '',
+        attendance: {
+        daysPresent: '',
+        daysAbsent: '',
+        timesTardy: ''
+        },
+        conduct: '',
         subjects: [{
           subject: '',
           scores: {
@@ -393,6 +403,57 @@ const AddGradeModal = ({ open, onOpenChange, onSuccess }) => {
                 </div>
               </div>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+       <div>
+        <Label htmlFor="daysPresent">Days Present</Label>
+         <Input
+            id="daysPresent"
+            type="number"
+           min="0"
+           {...register("attendance.daysPresent", { valueAsNumber: true })}
+           disabled={loading}
+           />
+         </div>
+         <div>
+         <Label htmlFor="daysAbsent">Days Absent</Label>
+           <Input
+           id="daysAbsent"
+         type="number"
+           min="0"
+           {...register("attendance.daysAbsent", { valueAsNumber: true })}
+          disabled={loading}
+         />
+        </div>
+       <div>
+          <Label htmlFor="timesTardy">Times Tardy</Label>
+         <Input
+          id="timesTardy"
+           type="number"
+          min="0"
+          {...register("attendance.timesTardy", { valueAsNumber: true })}
+        disabled={loading}
+         />
+          </div>
+        <div>
+       <Label htmlFor="conduct">Conduct</Label>
+         <Select
+          onValueChange={(v) => setValue('conduct', v)}
+            value={watch('conduct')}
+          disabled={loading}
+         >
+          <SelectTrigger id="conduct">
+           <SelectValue placeholder="Select Conduct" />
+         </SelectTrigger>
+          <SelectContent>
+          <SelectItem value="Excellent">Excellent</SelectItem>
+         <SelectItem value="Good">Good</SelectItem>
+         <SelectItem value="Satisfactory">Satisfactory</SelectItem>
+         <SelectItem value="Needs Improvement">Needs Improvement</SelectItem>
+        </SelectContent>
+        </Select>
+       </div>
+      </div>
+
 
             {/* Subjects and Scores */}
             <Card>

@@ -35,6 +35,10 @@ export function AddStudentModal({ open, onOpenChange }) {
   const [showWebcam, setShowWebcam] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [facingMode, setFacingMode] = useState('user');
+
+  //photo uploads
+  const [uploadedPhotoFile, setUploadedPhotoFile] = useState(null);
+  const [uploadedPhotoPreview, setUploadedPhotoPreview] = useState(null);
   
   // Document upload states
   const [transcriptFile, setTranscriptFile] = useState(null);
@@ -52,6 +56,47 @@ export function AddStudentModal({ open, onOpenChange }) {
     }
     return new File([u8arr], filename, { type: mime });
   };
+
+
+  const handlePhotoUpload = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (JPG, PNG, etc.)');
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should not exceed 5MB');
+      return;
+    }
+    
+    setUploadedPhotoFile(file);
+    
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setUploadedPhotoPreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+    
+    // Clear webcam captured image if exists
+    setCapturedImage(null);
+    // For EditStudentModal, also clear existing photo URL
+    if (typeof setExistingPhotoUrl !== 'undefined') {
+      setExistingPhotoUrl(null);
+    }
+  }
+};
+
+// Remove uploaded photo
+const removeUploadedPhoto = () => {
+  setUploadedPhotoFile(null);
+  setUploadedPhotoPreview(null);
+};
+
 
   // Handle file selection
   const handleFileSelect = (event, fileType) => {
@@ -126,6 +171,7 @@ export function AddStudentModal({ open, onOpenChange }) {
       formData.append('department', data.department || '');
       formData.append('classSection', data.classSection || '');
       formData.append('lastSchoolAttended', data.lastSchoolAttended || '');
+      formData.append('currentAddress', data.currentAddress || '');
       
       
       // Parent information
@@ -138,7 +184,10 @@ export function AddStudentModal({ open, onOpenChange }) {
       if (capturedImage) {
         const photoFile = base64ToFile(capturedImage, `student_${Date.now()}.jpg`);
         formData.append('photo', photoFile);
+      } else if (uploadedPhotoFile) {
+      formData.append('photo', uploadedPhotoFile);
       }
+
 
       // Add transcript file if selected
       if (transcriptFile) {
@@ -161,12 +210,20 @@ export function AddStudentModal({ open, onOpenChange }) {
       setTranscriptFile(null);
       setReportCardFile(null);
       onOpenChange(false);
+      setUploadedPhotoFile(null);
+      setUploadedPhotoPreview(null);
       
     } catch (err) {
       console.error('Error creating student:', err);
       toast.error(error || 'Failed to create student. Please try again.');
     }
   };
+
+  const getCurrentDisplayPhoto = () => {
+  if (capturedImage) return capturedImage;
+  if (uploadedPhotoPreview) return uploadedPhotoPreview;
+  return null;
+};
 
   const grades = [
     '7','8','9','10','11','12'
@@ -190,106 +247,173 @@ export function AddStudentModal({ open, onOpenChange }) {
         
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Photo Section */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-foreground border-b pb-2">
-              Student Photo
-            </h3>
-            
-            <div className="flex flex-col items-center space-y-4">
-              {!showWebcam && !capturedImage && (
-                <div className="flex flex-col items-center space-y-2">
-                  <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                    <Camera className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowWebcam(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <Camera className="h-4 w-4" />
-                    Take Photo
-                  </Button>
-                </div>
-              )}
-
-              {showWebcam && (
+                  <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-foreground border-b pb-2">
+                  Student Photo
+                </h3>
+                
                 <div className="flex flex-col items-center space-y-4">
-                  <div className="relative">
-                    <Webcam
-                      ref={webcamRef}
-                      audio={false}
-                      screenshotFormat="image/jpeg"
-                      videoConstraints={videoConstraints}
-                      className="rounded-lg border"
-                    />
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={capturePhoto}
-                      className="flex items-center gap-2"
-                    >
-                      <Camera className="h-4 w-4" />
-                      Capture
-                    </Button>
-                    
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={switchCamera}
-                      className="flex items-center gap-2"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      Switch Camera
-                    </Button>
-                    
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={closeWebcam}
-                      className="flex items-center gap-2"
-                    >
-                      <X className="h-4 w-4" />
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {capturedImage && (
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="relative">
-                    <img
-                      src={capturedImage}
-                      alt="Captured student"
-                      className="w-32 h-32 object-cover rounded-lg border"
-                    />
-                    <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
-                      <Check className="h-3 w-3" />
+                  {!showWebcam && !getCurrentDisplayPhoto() && (
+                    <div className="flex flex-col items-center space-y-2">
+                      <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                        <Camera className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowWebcam(true)}
+                          className="flex items-center gap-2"
+                        >
+                          <Camera className="h-4 w-4" />
+                          Take Photo
+                        </Button>
+                        <div className="relative">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex items-center gap-2"
+                            onClick={() => document.getElementById('photo-upload').click()}
+                          >
+                            <Upload className="h-4 w-4" />
+                            Upload Photo
+                          </Button>
+                          <input
+                            id="photo-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={retakePhoto}
-                      className="flex items-center gap-2"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      Retake
-                    </Button>
-                  </div>
+                  )}
+
+                  {showWebcam && (
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="relative">
+                        <Webcam
+                          ref={webcamRef}
+                          audio={false}
+                          screenshotFormat="image/jpeg"
+                          videoConstraints={videoConstraints}
+                          className="rounded-lg border"
+                        />
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={capturePhoto}
+                          className="flex items-center gap-2"
+                        >
+                          <Camera className="h-4 w-4" />
+                          Capture
+                        </Button>
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={switchCamera}
+                          className="flex items-center gap-2"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          Switch Camera
+                        </Button>
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={closeWebcam}
+                          className="flex items-center gap-2"
+                        >
+                          <X className="h-4 w-4" />
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {getCurrentDisplayPhoto() && (
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="relative">
+                        <img
+                          src={getCurrentDisplayPhoto()}
+                          alt="Student photo"
+                          className="w-32 h-32 object-cover rounded-lg border"
+                        />
+                        <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
+                          <Check className="h-3 w-3" />
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowWebcam(true)}
+                          className="flex items-center gap-2"
+                        >
+                          <Camera className="h-4 w-4" />
+                          Take New Photo
+                        </Button>
+                        
+                        <div className="relative">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-2"
+                            onClick={() => document.getElementById('photo-upload').click()}
+                          >
+                            <Upload className="h-4 w-4" />
+                            Upload New Photo
+                          </Button>
+                          <input
+                            id="photo-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                        </div>
+                        
+                        {capturedImage && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={retakePhoto}
+                            className="flex items-center gap-2"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                            Retake
+                          </Button>
+                        )}
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setCapturedImage(null);
+                            removeUploadedPhoto();
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <X className="h-4 w-4" />
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
 
           {/* Document Upload Section */}
           <div className="space-y-4">
@@ -438,6 +562,17 @@ export function AddStudentModal({ open, onOpenChange }) {
                 )}
               </div>
             </div>
+             <div className="space-y-2">
+              <Label htmlFor="currentAddress">Current Address</Label>
+              <Input
+                id="currentAddress"
+                {...register('currentAddress', { required: 'Current Address is required' })}
+                placeholder="Enter current Address"
+              />
+              {errors.currentAddress && (
+                  <p className="text-sm text-destructive">{errors.currentAddress.message}</p>
+                )}
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
@@ -497,7 +632,7 @@ export function AddStudentModal({ open, onOpenChange }) {
               <Label htmlFor="lastSchoolAttended">Last School Attended</Label>
               <Input
                 id="lastSchoolAttended"
-                {...register('lastSchoolAttended',{ required: 'Guardian name is required' })}
+                {...register('lastSchoolAttended',{ required: 'Last School attended is required' })}
                 placeholder="Bridge Int. Sch"
               />
               {errors.lastSchoolAttended && (
@@ -506,7 +641,7 @@ export function AddStudentModal({ open, onOpenChange }) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="classSection">Class Section (Optional)</Label>
+              <Label htmlFor="classSection">Class Section (Optional) </Label>
               <Input
                 id="classSection"
                 {...register('classSection')}
@@ -533,26 +668,25 @@ export function AddStudentModal({ open, onOpenChange }) {
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="occupation">Parent/Guardian Occupation</Label>
+              <div className="space-y-2">
+              <Label htmlFor="guardianOccupation">Parent/Guardian Occupation</Label>
               <Input
-                id="occupation"
-                {...register('occupation', { required: 'Guardian name is required' })}
+                id="guardianOccupation"
+                {...register('guardianOccupation', { required: 'Guardian occupation is required' })} // CORRECT
                 placeholder="Enter parent/guardian occupation"
               />
-              {errors.occupation && (
-                <p className="text-sm text-destructive">{errors.occupation.message}</p>
+              {errors.guardianOccupation && (
+                <p className="text-sm text-destructive">{errors.guardianOccupation.message}</p>
               )}
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="guardianEmail">Parent/Guardian Email</Label>
+                <Label htmlFor="guardianEmail">Parent/Guardian Email(Optional)</Label>
                 <Input
                   id="guardianEmail"
                   type="email"
-                  {...register('guardianEmail', { 
-                    required: 'Guardian email is required',
+                  {...register('guardianEmail', {
                     pattern: {
                       value: /^\S+@\S+$/i,
                       message: 'Invalid email address'
@@ -560,9 +694,6 @@ export function AddStudentModal({ open, onOpenChange }) {
                   })}
                   placeholder="parent@example.com"
                 />
-                {errors.guardianEmail && (
-                  <p className="text-sm text-destructive">{errors.guardianEmail.message}</p>
-                )}
               </div>
               
               <div className="space-y-2">
@@ -590,6 +721,8 @@ export function AddStudentModal({ open, onOpenChange }) {
                 setReportCardFile(null);
                 setShowWebcam(false);
                 onOpenChange(false);
+                setUploadedPhotoFile(null);
+                setUploadedPhotoPreview(null);
               }}
               disabled={loading}
             >

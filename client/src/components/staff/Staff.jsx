@@ -167,7 +167,9 @@ const Staff = () => {
       {
         accessorKey: 'qualifications',
         header: 'Qualification',
-        cell: ({ row }) => <div className="text-sm font-medium">{row.original?.qualifications || 'N/A'}</div>,
+        cell: ({ row }) => <div className="text-sm font-medium">{row.original?.qualifications?.length > 0
+  ? row.original.qualifications.join(', ')
+  : 'N/A'}</div>,
       },
       {
         id: 'actions',

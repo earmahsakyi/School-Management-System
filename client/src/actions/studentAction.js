@@ -232,32 +232,51 @@ export const searchStudents = (admissionNumber) => async (dispatch) => {
 };
 
 // Update promotion status
-export const updatePromotionStatus = (studentId, promotionStatus) => async (dispatch) => {
+export const updatePromotionStatus = (studentId, promotionStatus, promotedToGrade, notes) => async (dispatch) => {
   try {
-    const token = localStorage.getItem('token')
+    dispatch(setStudentLoading()); // Add loading state
+
+    const token = localStorage.getItem('token');
 
     const config = {
       headers: {
         'Content-Type': 'application/json',
-        'x-auth-token' : token
+        'x-auth-token': token
       }
-    }
-    
-    const res = await axios.put(`/api/student/${studentId}/promotion`, promotionStatus, config);
+    };
 
+    const res = await axios.put(`/api/student/${studentId}/promotion`, { 
+      promotionStatus, 
+      promotedToGrade ,
+      notes
+    }, config);
+
+    // Dispatch with the correct action type and payload structure
     dispatch({
       type: UPDATE_STUDENT_SUCCESS,
-      payload: res.data,
+      payload: {
+        success: true,
+        data: res.data.data,  
+        msg: res.data.msg
+      }
     });
+    
+
+    return res.data;
   } catch (err) {
+    const errorMessage = err.response?.data?.msg || err.message || 'An unknown error occurred during promotion update.';
+    
     dispatch({
       type: UPDATE_STUDENT_FAIL,
-      payload: err.response.data.msg,
+      payload: errorMessage
     });
+    
+    throw err; 
   }
 };
 
-// Get Provider Stats
+
+// Get school Stats
 export const getStats = () => async (dispatch) => {
   
   try {
@@ -268,6 +287,7 @@ export const getStats = () => async (dispatch) => {
       type: GET_STATS_SUCCESS,
       payload: res.data 
     });
+    
     return res.data
 
   } catch (err) {

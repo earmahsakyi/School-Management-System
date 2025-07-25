@@ -1,90 +1,168 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getStudentById, updatePromotionStatus } from '../../actions/studentAction';
-import { Loader2 } from 'lucide-react';
+import { getStudentById, updatePromotionStatus } from '@/actions/studentAction';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription 
+} from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'react-hot-toast';
+import { Loader2 } from 'lucide-react';
 
-const AdminPromotionView = () => {
-  const { studentId } = useParams();
+const AdminPromotionModal = ({ studentId, open, onOpenChange }) => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { student, loading, error } = useSelector((state) => state.student);
+  const { student, loading, error: studentError } = useSelector((state) => state.student); // Renamed error to studentError to avoid conflict
+
   const [promotionStatus, setPromotionStatus] = useState('');
+  const [promotedToGrade, setPromotedToGrade] = useState('');
+  const [notes, setNote] = useState('');
 
   useEffect(() => {
-    dispatch(getStudentById(studentId));
-  }, [dispatch, studentId]);
+    if (studentId && open) {
+      dispatch(getStudentById(studentId));
+    }
+  }, [dispatch, studentId, open]);
 
   useEffect(() => {
     if (student) {
-      setPromotionStatus(student.promotionStatus);
+      setPromotionStatus(student.promotionStatus || '');
+      setPromotedToGrade(student.promotedToGrade || '');
+      
     }
   }, [student]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    dispatch(updatePromotionStatus(studentId, { promotionStatus }));
-    toast.success('Promotion status updated successfully!');
-    navigate('/students');
+    if (!promotionStatus) {
+      toast.error('Please select a promotion status');
+      return;
+    }
+
+   
+    if (promotionStatus === 'Promoted' && !promotedToGrade) {
+      toast.error('Please select a promoted grade');
+      return;
+    }
+
+
+    try {
+      await dispatch(updatePromotionStatus(studentId, promotionStatus, promotedToGrade, notes));
+      toast.success('Promotion status updated successfully!');
+      onOpenChange(false); // Close modal on success
+    } catch (err) {
+      toast.error(studentError || 'Failed to update promotion status.');
+      console.error("Failed to update promotion status:", err);
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2 text-muted-foreground">Loading student...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8 max-w-lg">
-      <Card>
-        <CardHeader>
-          <CardTitle>Update Promotion Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <p>
-                <strong>Student:</strong> {student?.firstName} {student?.lastName}
-              </p>
-              <p>
-                <strong>Admission Number:</strong> {student?.admissionNumber}
-              </p>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Update Promotion Status</DialogTitle>
+          <DialogDescription>
+            Adjust the promotion status for {student?.firstName} {student?.lastName}.
+          </DialogDescription>
+        </DialogHeader>
+        {loading && !student ? ( // Show loader only when initially fetching student data
+          <div className="flex justify-center items-center h-32">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Promotion Status</label>
+              <Select value={promotionStatus} onValueChange={setPromotionStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Promoted">Promoted</SelectItem>
+                  <SelectItem value="Conditional Promotion">Conditional Promotion</SelectItem>
+                  <SelectItem value="Not Promoted">Not Promoted</SelectItem>
+                  <SelectItem value="Asked Not to Enroll">Asked Not to Enroll</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={promotionStatus} onValueChange={setPromotionStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select promotion status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Promoted">Promoted</SelectItem>
-                <SelectItem value="Not Promoted">Not Promoted</SelectItem>
-                <SelectItem value="Conditional Promotion">Conditional Promotion</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button type="submit" className="mt-4">
-              Update Status
-            </Button>
+
+            {promotionStatus === 'Promoted' && (
+              <div>
+                <label className="text-sm font-medium">Promoted To Grade</label>
+                <Select value={promotedToGrade} onValueChange={setPromotedToGrade}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="8">8</SelectItem>
+                    <SelectItem value="9">9</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="11">11</SelectItem>
+                    <SelectItem value="12">12</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            {promotionStatus === 'Conditional Promotion' && (
+              <div>
+                <label className="text-sm font-medium">Promoted To Grade</label>
+                <Select value={promotedToGrade} onValueChange={setPromotedToGrade}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="8">8</SelectItem>
+                    <SelectItem value="9">9</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="11">11</SelectItem>
+                    <SelectItem value="12">12</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+            )}
+              <div className="space-y-2">
+               <Label htmlFor="notes">Notes (Optional)</Label>
+           <Input
+             id="notes"
+            type="text"
+             value={notes}
+              onChange={(e) => setNote(e.target.value)}
+             placeholder="Add any comments or special notes"
+           />
+          </div>
+            
+            <div className="flex gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="w-full"
+              >
+                Cancel
+              </Button>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Promotion'
+                )}
+              </Button>
+            </div>
           </form>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };
 
-export default AdminPromotionView;
+export default AdminPromotionModal;
