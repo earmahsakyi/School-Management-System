@@ -288,7 +288,7 @@ export function EditGradeModal({ open, onOpenChange, grade, onSuccess }) {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-medium">
-                        {grade.student?.firstName} {grade.student?.lastName}
+                        {grade.student?.firstName} {grade.student?.lastName} {grade.student?.middleName || ''}
                       </h4>
                       <p className="text-sm text-muted-foreground">
                         {grade.student?.admissionNumber} - Grade {grade.student?.gradeLevel}, {grade.student?.department}

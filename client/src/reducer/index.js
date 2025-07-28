@@ -4,6 +4,7 @@ import adminReducer from "./adminReducer";
 import studentReducer from "./studentReducer";
 import staffReducer from "./staffReducer";
 import gradeReducer from "./gradeReducer";
+import announcementReducer from "./announcementReducer";
 
 
 
@@ -13,6 +14,7 @@ const appReducer = combineReducers({
   student: studentReducer,
   staff: staffReducer,
   grade: gradeReducer,
+  announcement: announcementReducer,
  
 });
 

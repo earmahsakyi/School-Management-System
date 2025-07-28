@@ -124,7 +124,7 @@ const TranscriptList = () => {
                 {filteredStudents.map((student) => (
                   <TableRow key={student._id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">{student.admissionNumber}</TableCell>
-                    <TableCell>{`${student.firstName} ${student.lastName}`}</TableCell>
+                    <TableCell>{`${student.firstName} ${student.lastName} ${student.middleName || ''}`}</TableCell>
                     <TableCell>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                         Grade {student.gradeLevel}
@@ -136,7 +136,7 @@ const TranscriptList = () => {
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {student.isActive ? 'Active' : 'Inactive'}
+                        {student.isActive ? 'Active' : 'Active'}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">

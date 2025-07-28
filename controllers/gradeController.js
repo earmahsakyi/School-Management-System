@@ -1,5 +1,6 @@
 const Grade = require('../models/Grade');
 const Student = require('../models/Student');
+const Parent = require('../models/Parent');
 
 // Helper function to calculate semester average
 const calculateSemesterAverage = (subject, term) => {
@@ -232,7 +233,7 @@ if (conduct && !["Excellent", "Good", "Satisfactory", "Needs Improvement"].inclu
 
     const grade = new Grade(gradeData);
     await grade.save();
-    await grade.populate('student', 'firstName lastName admissionNumber gradeLevel department classSection');
+    await grade.populate('student', 'firstName lastName middleName admissionNumber gradeLevel department classSection');
 
     res.status(201).json({
       success: true,
@@ -292,7 +293,7 @@ const getAllGrades = async (req, res) => {
     const skip = (page - 1) * limit;
     
     const grades = await Grade.find(filter)
-      .populate('student', 'firstName lastName admissionNumber gradeLevel department classSection')
+      .populate('student', 'firstName lastName middleName admissionNumber gradeLevel department classSection')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -321,7 +322,7 @@ const getAllGrades = async (req, res) => {
 const getGradeById = async (req, res) => {
   try {
     const grade = await Grade.findById(req.params.id)
-      .populate('student', 'firstName lastName admissionNumber gradeLevel department classSection');
+      .populate('student', 'firstName lastName middleName admissionNumber gradeLevel department classSection');
 
     if (!grade) {
       return res.status(404).json({
@@ -354,7 +355,7 @@ const getStudentGrades = async (req, res) => {
     if (term) filter.term = term;
 
     const grades = await Grade.find(filter)
-      .populate('student', 'firstName lastName admissionNumber gradeLevel department classSection')
+      .populate('student', 'firstName lastName middleName admissionNumber gradeLevel department classSection')
       .sort({ academicYear: -1, term: 1 });
 
     res.json({
@@ -441,7 +442,7 @@ const updateGrade = async (req, res) => {
     grade.overallAverage = updatedData.overallAverage;
 
     await grade.save();
-    await grade.populate('student', 'firstName lastName admissionNumber gradeLevel department classSection');
+    await grade.populate('student', 'firstName lastName middleName admissionNumber gradeLevel department classSection');
 
     res.json({
       success: true,
@@ -495,7 +496,7 @@ const getClassPerformance = async (req, res) => {
     if (department) filter.department = department;
 
     const grades = await Grade.find(filter)
-      .populate('student', 'firstName lastName admissionNumber gradeLevel department classSection');
+      .populate('student', 'firstName lastName middleName admissionNumber gradeLevel department classSection');
 
     const stats = {
       overallStats: {
@@ -557,12 +558,12 @@ const getClassPerformance = async (req, res) => {
       
       const topStudent = studentAverages.reduce((top, s) => s.avg > (top.avg || 0) ? s : top, {});
       stats.overallStats.topPerformer = topStudent.student 
-        ? `${topStudent.student.firstName} ${topStudent.student.lastName}` 
+        ? `${topStudent.student.firstName} ${topStudent.student.lastName} ${topStudent.student.middleName || ''}` 
         : 'N/A';
       
       const lowestStudent = studentAverages.reduce((low, s) => s.avg < (low.avg || Infinity) ? s : low, { avg: Infinity });
       stats.overallStats.lowestPerformer = lowestStudent.student 
-        ? `${lowestStudent.student.firstName} ${lowestStudent.student.lastName}` 
+        ? `${lowestStudent.student.firstName} ${lowestStudent.student.lastName}  ${lowestStudent.student.middleName || ''}` 
         : 'N/A';
 
       // Calculate grade distribution percentages
@@ -595,7 +596,7 @@ const getStudentPerformance = async (req, res) => {
     if (term) filter.term = term;
 
     const grades = await Grade.find(filter)
-      .populate('student', 'firstName lastName admissionNumber gradeLevel department classSection')
+      .populate('student', 'firstName lastName middleName admissionNumber gradeLevel department classSection')
       .sort({ academicYear: -1, term: 1 });
 
     if (grades.length === 0) {
@@ -689,6 +690,7 @@ const getStudentPerformance = async (req, res) => {
             _id: student._id,
             firstName: student.firstName,
             lastName: student.lastName,
+            middleName: student.middleName || '',
             admissionNumber: student.admissionNumber,
             gradeLevel: student.gradeLevel,
             department: student.department,
@@ -806,6 +808,7 @@ const getStudentPerformance = async (req, res) => {
         _id: student._id,
         firstName: student.firstName,
         lastName: student.lastName,
+        middleName: student.middleName || '',
         admissionNumber: student.admissionNumber,
         gradeLevel: student.gradeLevel,
         department: student.department,
@@ -841,21 +844,57 @@ const getStudentPerformance = async (req, res) => {
 // Search students
 const searchStudents = async (req, res) => {
   try {
+    console.log('Search students called with user:', req.user?._id);
+    console.log('Query params:', req.query);
+
+    
     const { query } = req.query;
-    if (!query) {
-      return res.status(400).json({
+    
+    // Find the parent document associated with the authenticated user
+    const parent = await Parent.findOne({ user: req.user._id }).select('students');
+  
+    
+    if (!parent) {
+      return res.status(404).json({
         success: false,
-        message: 'Search query is required'
+        message: 'Parent account not found'
       });
     }
 
-    const students = await Student.find({
-      $or: [
-        { firstName: { $regex: query, $options: 'i' } },    
-        { lastName: { $regex: query, $options: 'i' } },
-        { admissionNumber: { $regex: query, $options: 'i' } }  
-      ]
-    }).select('firstName lastName admissionNumber gradeLevel department classSection');
+    // If no students are linked to the parent
+    if (!parent.students || parent.students.length === 0) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    // Build the query to find students
+    const studentQuery = {
+      _id: { $in: parent.students } // Only fetch students linked to this parent
+    };
+
+    // If a search query is provided and it's not "all", apply text search
+    if (query && query.trim() !== '' && query.trim().toLowerCase() !== 'all') {
+      studentQuery.$and = [
+        { _id: { $in: parent.students } },
+        {
+          $or: [
+            { firstName: { $regex: query, $options: 'i' } },
+            { lastName: { $regex: query, $options: 'i' } },
+            { middleName: { $regex: query, $options: 'i' } },
+            { admissionNumber: { $regex: query, $options: 'i' } }
+          ]
+        }
+      ];
+    }
+
+    console.log('Student query:', JSON.stringify(studentQuery, null, 2));
+
+    const students = await Student.find(studentQuery)
+      .select('firstName lastName middleName admissionNumber gradeLevel department classSection');
+
+    console.log('Found students:', students.length);
 
     res.json({
       success: true,

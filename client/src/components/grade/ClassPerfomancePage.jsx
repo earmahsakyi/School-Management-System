@@ -196,9 +196,8 @@ export default function ClassPerformancePage() {
                     <SelectValue placeholder="Select term" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Term 1</SelectItem>
-                    <SelectItem value="2">Term 2</SelectItem>
-                    <SelectItem value="3">Term 3</SelectItem>
+                    <SelectItem value="1">Semester 1</SelectItem>
+                    <SelectItem value="2">Semester 2</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

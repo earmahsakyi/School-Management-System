@@ -17,7 +17,23 @@ import {
   CLEAR_STUDENT_ERRORS,
   STATS_LOADING,
   GET_STATS_SUCCESS,
-  GET_STATS_FAIL
+  GET_STATS_FAIL,
+  GET_PROMOTION_PREVIEW_REQUEST ,
+ GET_PROMOTION_PREVIEW_SUCCESS ,
+ GET_PROMOTION_PREVIEW_FAIL,
+ PROCESS_STUDENT_PROMOTION_REQUEST,
+PROCESS_STUDENT_PROMOTION_SUCCESS ,
+PROCESS_STUDENT_PROMOTION_FAIL,
+GET_YEARLY_AVERAGES_REQUEST ,
+ GET_YEARLY_AVERAGES_SUCCESS,
+ GET_YEARLY_AVERAGES_FAIL ,
+PROCESS_BATCH_PROMOTIONS_REQUEST ,
+ PROCESS_BATCH_PROMOTIONS_SUCCESS,
+PROCESS_BATCH_PROMOTIONS_FAIL,
+GET_ELIGIBLE_STUDENTS_REQUEST ,
+ GET_ELIGIBLE_STUDENTS_SUCCESS ,
+ GET_ELIGIBLE_STUDENTS_FAIL ,
+CLEAR_PROMOTION_DATA
 } from '../actions/types';
 
 const initialState = {
@@ -30,6 +46,12 @@ const initialState = {
   count: 0,
   stats: {},
   statsLoading: false,
+  promotionPreview: null,
+  yearlyAverages: null,
+  eligibleStudents: null,
+  batchPromotionResult: null,
+  promotionLoading: false,
+  promotionError: null,
 };
 
 const studentReducer = (state = initialState, action) => {
@@ -222,6 +244,129 @@ const studentReducer = (state = initialState, action) => {
         ...state,
         loading: false,
         error: payload
+      };
+      case GET_PROMOTION_PREVIEW_REQUEST:
+      return {
+        ...state,
+        promotionLoading: true,
+        promotionError: null
+      };
+    case GET_PROMOTION_PREVIEW_SUCCESS:
+      return {
+        ...state,
+        promotionLoading: false,
+        promotionPreview: payload.data,
+        promotionError: null
+      };
+    case GET_PROMOTION_PREVIEW_FAIL:
+      return {
+        ...state,
+        promotionLoading: false,
+        promotionError: payload,
+        promotionPreview: null
+      };
+
+    // Process Student Promotion Cases
+    case PROCESS_STUDENT_PROMOTION_REQUEST:
+      return {
+        ...state,
+        promotionLoading: true,
+        promotionError: null
+      };
+    case PROCESS_STUDENT_PROMOTION_SUCCESS:
+      return {
+        ...state,
+        promotionLoading: false,
+        promotionError: null,
+        // Update the student in the students array if it exists
+        students: state.students.map(student =>
+          student._id === payload.data.updatedStudent.id
+            ? { ...student, ...payload.data.updatedStudent }
+            : student
+        )
+      };
+    case PROCESS_STUDENT_PROMOTION_FAIL:
+      return {
+        ...state,
+        promotionLoading: false,
+        promotionError: payload
+      };
+
+    // Yearly Averages Cases
+    case GET_YEARLY_AVERAGES_REQUEST:
+      return {
+        ...state,
+        promotionLoading: true,
+        promotionError: null
+      };
+    case GET_YEARLY_AVERAGES_SUCCESS:
+      return {
+        ...state,
+        promotionLoading: false,
+        yearlyAverages: payload.data,
+        promotionError: null
+      };
+    case GET_YEARLY_AVERAGES_FAIL:
+      return {
+        ...state,
+        promotionLoading: false,
+        promotionError: payload,
+        yearlyAverages: null
+      };
+
+    // Batch Promotions Cases
+    case PROCESS_BATCH_PROMOTIONS_REQUEST:
+      return {
+        ...state,
+        promotionLoading: true,
+        promotionError: null
+      };
+    case PROCESS_BATCH_PROMOTIONS_SUCCESS:
+      return {
+        ...state,
+        promotionLoading: false,
+        batchPromotionResult: payload.data,
+        promotionError: null
+      };
+    case PROCESS_BATCH_PROMOTIONS_FAIL:
+      return {
+        ...state,
+        promotionLoading: false,
+        promotionError: payload,
+        batchPromotionResult: null
+      };
+
+    // Eligible Students Cases
+    case GET_ELIGIBLE_STUDENTS_REQUEST:
+      return {
+        ...state,
+        promotionLoading: true,
+        promotionError: null
+      };
+    case GET_ELIGIBLE_STUDENTS_SUCCESS:
+      return {
+        ...state,
+        promotionLoading: false,
+        eligibleStudents: payload.data,
+        promotionError: null
+      };
+    case GET_ELIGIBLE_STUDENTS_FAIL:
+      return {
+        ...state,
+        promotionLoading: false,
+        promotionError: payload,
+        eligibleStudents: null
+      };
+
+    // Clear promotion data
+    case CLEAR_PROMOTION_DATA:
+      return {
+        ...state,
+        promotionPreview: null,
+        yearlyAverages: null,
+        eligibleStudents: null,
+        batchPromotionResult: null,
+        promotionError: null
       };
 
     default:

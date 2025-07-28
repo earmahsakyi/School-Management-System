@@ -46,7 +46,7 @@ const Login = () => {
           toast.success("Login Successful")
           navigate(result.profileUpdated ? '/admin-dashboard' : '/complete-admin-profile');
         } else if (result.role === 'parent') {
-          navigate('/parent-page');
+          navigate('/parent-dashboard');
         }
       }  
     } catch (err) {

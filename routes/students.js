@@ -16,7 +16,12 @@ const {
   deleteStudentAndParent,
   searchStudents,
   getSchoolStats,
-  updatePromotionStatus
+  updatePromotionStatus,
+  getStudentPromotionPreview,
+  processStudentPromotion,
+  getStudentYearlyAveragesController,
+  processBatchStudentPromotions,
+  getEligibleStudentsForPromotion
 } = require('../controllers/studentController');
 
 // Custom Multer setup for handling multiple file fields for update/create
@@ -59,7 +64,7 @@ const uploadMultipleFiles = multer({
     }
   },
   limits: {
-    fileSize: 2 * 1024 * 1024 // 5 MB per file
+    fileSize: 2 * 1024 * 1024 // 2 MB per file
   }
 }).fields([
   { name: 'photo', maxCount: 1 },
@@ -67,11 +72,9 @@ const uploadMultipleFiles = multer({
   { name: 'reportCard', maxCount: 1 },
 ]);
 
-
 // Main student routes with consolidated file upload
 router.post('/', auth, uploadMultipleFiles, createStudentAndParent); 
 router.put('/:id', auth, uploadMultipleFiles, updateStudentAndParent); 
-
 
 // Remove individual files
 router.delete('/remove-transcript/:id', auth, async (req, res) => {
@@ -132,12 +135,19 @@ router.delete('/remove-reportcard/:id', auth, async (req, res) => {
   }
 });
 
-// Main CRUD routes (unchanged)
+// Promotion-related routes
+router.get('/promotion/eligible', auth, getEligibleStudentsForPromotion);
+router.post('/promotion/batch', auth, processBatchStudentPromotions);
+router.get('/:id/promotion/preview', auth, getStudentPromotionPreview);
+router.post('/:id/promotion/process', auth, processStudentPromotion);
+router.get('/:id/yearly-averages', auth, getStudentYearlyAveragesController);
+router.put('/:id/promotion', auth, updatePromotionStatus);
+
+// Main CRUD routes
 router.get('/search', auth, searchStudents);
 router.get('/', auth, getAllStudents);
 router.get('/stats', auth, getSchoolStats);
 router.get('/:id', auth, getStudentById);
 router.delete('/:id', auth, deleteStudentAndParent);
-router.put('/:id/promotion', auth,updatePromotionStatus);
 
 module.exports = router;

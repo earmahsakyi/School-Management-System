@@ -127,7 +127,7 @@ const ViewGradeModal = ({ open, onOpenChange, grade, allStudentGrades }) => {
       {/* Changed max-h to h for explicit height for debugging, and added overflow-hidden */}
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Grade Details: {grade.student?.firstName} {grade.student?.lastName}</DialogTitle>
+          <DialogTitle>Grade Details: {grade.student?.firstName} {grade.student?.lastName} {grade.student?.middleName || ''}</DialogTitle>
           <DialogDescription>
             Detailed academic record for {grade.academicYear} - Term {grade.term}
           </DialogDescription>
@@ -144,7 +144,7 @@ const ViewGradeModal = ({ open, onOpenChange, grade, allStudentGrades }) => {
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Student Name</p>
-                  <p className="font-semibold">{grade.student?.firstName} {grade.student?.lastName}</p>
+                  <p className="font-semibold">{grade.student?.firstName} {grade.student?.lastName} {grade.student?.middleName ||''}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Admission Number</p>
@@ -559,8 +559,8 @@ export default function GradesPage() {
                   <SelectTrigger><SelectValue placeholder="Select term" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Terms</SelectItem>
-                    <SelectItem value="1">Term 1</SelectItem>
-                    <SelectItem value="2">Term 2</SelectItem>
+                    <SelectItem value="1">Semester 1</SelectItem>
+                    <SelectItem value="2">Semester 2</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -597,7 +597,7 @@ export default function GradesPage() {
                     <SelectItem value="all">All Departments</SelectItem>
                     <SelectItem value="Science">Science</SelectItem>
                     <SelectItem value="Arts">Arts</SelectItem>
-                    <SelectItem value="Commercial">Commercial</SelectItem>
+                    <SelectItem value="JHS">JHS</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -685,7 +685,7 @@ export default function GradesPage() {
                             className="hover:bg-muted/50"
                           >
                             <TableCell className="font-medium">
-                              {grade.student?.firstName} {grade.student?.lastName}
+                              {grade.student?.firstName} {grade.student?.lastName} {grade.student?.middleName || ''}
                             </TableCell>
                             <TableCell>{grade.student?.admissionNumber}</TableCell>
                             <TableCell>{grade.academicYear}</TableCell>
@@ -812,7 +812,7 @@ export default function GradesPage() {
             <AlertDialogDescription>
               Are you sure you want to delete this grade record for{' '}
               <span className="font-semibold">
-                {gradeToDelete?.student?.firstName} {gradeToDelete?.student?.lastName}
+                {gradeToDelete?.student?.firstName} {gradeToDelete?.student?.lastName} {gradeToDelete?.student?.middleName || ''}
               </span>
               ? This action cannot be undone.
             </AlertDialogDescription>

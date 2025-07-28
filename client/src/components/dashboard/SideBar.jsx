@@ -6,7 +6,6 @@ import {
   UserCheck, 
   BookOpen, 
   GraduationCap,
-  CalendarCheck,
   CreditCard,
   BarChart3,
   Settings,
@@ -23,9 +22,11 @@ const menuItems = [
   { icon: BookOpen, label: 'Transcript', href: '/transcript' },
   { icon: BookOpen, label: 'Master Grade Sheet', href: '/grade-sheet' },
   { icon: BarChart3, label: 'Roster Summary', href: '/roster-summary' },
-  { icon: CreditCard, label: 'Fees', href: '/fees' },
-  { icon: BarChart3, label: 'Reports', href: '/reports' },
-  { icon: Settings, label: 'Settings', href: '/settings' },
+  { icon: CreditCard, label: 'Academic Fees', href: '/payments' },
+  { icon: CreditCard, label: 'Other Payments', href: '/other-payments' },
+  { icon: CreditCard, label: 'TVETS', href: '/tvet-payments' },
+  { icon: BarChart3, label: 'Reports', href: '/financial-report' },
+  { icon: Settings, label: 'Promotion', href: '/promotion' },
 ];
 
 export function Sidebar({ isOpen, onClose }) {

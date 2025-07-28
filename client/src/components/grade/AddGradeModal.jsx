@@ -68,6 +68,7 @@ const AddGradeModal = ({ open, onOpenChange, onSuccess }) => {
   const filteredStudents = students.filter(student =>
     student.firstName.toLowerCase().includes(studentSearch.toLowerCase()) ||
     student.lastName.toLowerCase().includes(studentSearch.toLowerCase()) ||
+    student?.middleName || ''.toLowerCase().includes(studentSearch.toLowerCase()) ||
     student.admissionNumber.toLowerCase().includes(studentSearch.toLowerCase())
   );
 
@@ -327,7 +328,7 @@ const AddGradeModal = ({ open, onOpenChange, onSuccess }) => {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium">{selectedStudent.firstName} {selectedStudent.lastName}</h4>
+                        <h4 className="font-medium">{selectedStudent.firstName} {selectedStudent.lastName} {selectedStudent?.middleName || ''}</h4>
                         <p className="text-sm text-muted-foreground">
                           {selectedStudent.admissionNumber} - Grade {selectedStudent.gradeLevel}, {selectedStudent.department}
                         </p>
@@ -350,7 +351,7 @@ const AddGradeModal = ({ open, onOpenChange, onSuccess }) => {
                         >
                           <div className="flex items-center justify-between">
                             <div>
-                              <h4 className="font-medium">{student.firstName} {student.lastName}</h4>
+                              <h4 className="font-medium">{student.firstName} {student.lastName} {student?.middleName || ''}</h4>
                               <p className="text-sm text-muted-foreground">{student.admissionNumber}</p>
                             </div>
                             <Badge variant="outline">Grade {student.gradeLevel} - {student.department}</Badge>

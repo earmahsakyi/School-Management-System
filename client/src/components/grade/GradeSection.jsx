@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, BarChart3, User, Users } from "lucide-react";
+import { GraduationCap, BarChart3, User,} from "lucide-react";
 import { DashboardLayout } from "../dashboard/DashboardLayout";
 
 const Index = () => {

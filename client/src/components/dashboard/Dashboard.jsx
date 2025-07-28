@@ -1,6 +1,6 @@
 import  {StatsCards} from './StatsCard';
 import  {AttendanceChart} from './AttendanceChart';
-import {FeesTable}  from './FeesTable';
+// import {FeesTable}  from './FeesTable';
 import  {AnnouncementsPanel}  from './AnnoucementPanel';
 import { QuickActions } from './QuickActions';
 
@@ -15,7 +15,7 @@ export function Dashboard() {
         {/* Left Column - Chart and Table */}
         <div className="lg:col-span-2 space-y-6">
           <AttendanceChart />
-          <FeesTable />
+          {/* <FeesTable /> */}
         </div>
 
         {/* Right Column - Announcements and Quick Actions */}

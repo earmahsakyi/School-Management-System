@@ -62,24 +62,23 @@ const validateGrade = (req, res, next) => {
             message: 'Each subject must have a scores object.'
         });
     }
-
-    // The detailed score validation (e.g., 0-100 range, isNaN)
-    // is better handled in the controller where the parsing happens.
   }
 
   next();
 };
 
 // Basic CRUD routes
-// REMOVED 'validateGrade' from the POST route as it's redundant and incorrect for the schema.
 router.post('/', auth, createGrade);
 router.get('/', auth, getAllGrades);
+
+//Search route must come before parameterized routes
 router.get('/students/search', auth, searchStudents);
+
 router.get('/:id', auth, getGradeById);
 router.put('/:id', auth, updateGrade);
 router.delete('/:id', auth, deleteGrade);
 
-// Student-specific routes
+// Student-specific routes  
 router.get('/student/:studentId', auth, getStudentGrades);
 router.get('/performance/student/:studentId', auth, getStudentPerformance);
 

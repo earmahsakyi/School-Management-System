@@ -25,8 +25,13 @@ app.use('/api/staff',require('./routes/staff'));
 app.use('/api/grade',require('./routes/grade'));      
 app.use('/api/transcript',require('./routes/transcript'));      
 app.use('/api/master-grade-sheet',require('./routes/gradeSheet'));     
-app.use('/api/recommendation',require('./routes/recommendation'));     
-app.use('/api/rooster-summary',require('./routes/rosterSummary'));     
+app.use('/api/recommendation',require('./routes/recommendation'));        
+app.use('/api/rooster-summary',require('./routes/rosterSummary'));   
+app.use('/api/announcements', require('./routes/announcement'));  
+app.use('/api/payments', require('./routes/payment'));  
+app.use('/api/other-payments', require('./routes/otherPayment'));  
+app.use('/api/financial', require('./routes/financialReport'));  
+app.use('/api/tvet', require('./routes/tvet'));  
 
        
 const PORT = 5000;

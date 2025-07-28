@@ -23,6 +23,12 @@ import ReportCardsList from './components/student/ReportCardList';
 import TranscriptList from './components/student/TranscriptList';
 import StudentPerformancePage from './components/grade/StudentPerformancePage';
 import MasterGradeSheet from './components/staff/MasterGradeSheet';
+import PaymentsPage from './components/payment/PaymentPage';
+import OtherPayment from './components/payment/OtherPayment'
+import FinancialReport from './components/staff/FinancialReport';
+import PromotionDashboard from './components/dashboard/PromotionDasboard';
+import TvetPaymentsPage from './components/payment/TvetPaymentPage';
+import ParentDashboard from './components/dashboard/ParentDashboard';
  import { loadUser } from './actions/authAction'; 
  
 
@@ -54,9 +60,15 @@ const AppInner = () => {
       <Route path="/grades" element={<PrivateRoute element={GradesPage} />} />
       <Route path="/transcript" element={<PrivateRoute element={TranscriptList} />} />
       <Route path="/admin/promotion/:studentId" element={<PrivateRoute element={AdminPromotionView} />} />
-      <Route path="reportCards" element={<PrivateRoute element={ReportCardsList} />} />
-      <Route path="grade-sheet" element={<PrivateRoute element={MasterGradeSheet} />} />
-      <Route path="roster-summary" element={<PrivateRoute element={RoosterSummary} />} />
+      <Route path="/reportCards" element={<PrivateRoute element={ReportCardsList} />} />
+      <Route path="/grade-sheet" element={<PrivateRoute element={MasterGradeSheet} />} />
+      <Route path="/roster-summary" element={<PrivateRoute element={RoosterSummary} />} />
+      <Route path="/payments" element={<PrivateRoute element={PaymentsPage} />} />
+      <Route path="/financial-report" element={<PrivateRoute element={FinancialReport} />} />
+      <Route path="/promotion" element={<PrivateRoute element={PromotionDashboard} />} />
+      <Route path="/other-payments" element={<PrivateRoute element={OtherPayment} />} />
+      <Route path="/tvet-payments" element={<PrivateRoute element={TvetPaymentsPage} />} />
+      <Route path="/parent-dashboard" element={<PrivateRoute element={ParentDashboard} />} />
  
     </Routes>
   );
