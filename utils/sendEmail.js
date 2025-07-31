@@ -1,6 +1,6 @@
 // utils/sendEmail.js
+console.log("RESEND KEY:", process.env.RESEND_API_KEY); // Debug line
 const { Resend } = require('resend');
-// const config = require('../config/default.json')
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmail = async ({ to, subject, html }) => {
