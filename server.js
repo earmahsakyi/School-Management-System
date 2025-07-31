@@ -14,7 +14,7 @@ app.use(express.json({ extended: false }));
 app.get('/', (req, res) => res.json({ msg: 'Welcome to the School Management API' }));
 
 //Define API Routes
-// app.use('/api/auth', require('./routes/auth'));
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 // app.use('/api/student', require('./routes/students'));
 app.use('/api/reportcard', require('./routes/reportCard'));
