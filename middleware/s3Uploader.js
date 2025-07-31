@@ -3,13 +3,13 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const createError = require('http-errors');
-const config = require('../config/default.json');
+// const config = require('../config/default.json');
 
 const s3 = new S3Client({
-  region: config.AWS_REGION,
+  region: process.env.AWS_REGION,
   credentials: {
-    accessKeyId: config.AWS_ACCESS_KEY_ID,
-    secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
 });
 
@@ -56,7 +56,7 @@ const uploadToS3 = async (file, role = 'common') => {
   const fileStats = fs.statSync(file.path);
   const fileStream = fs.createReadStream(file.path);
   const uploadParams = {
-    Bucket: config.AWS_BUCKET_NAME,
+    Bucket: process.env.AWS_BUCKET_NAME,
     Key: key,
     Body: fileStream,
     ContentType: file.mimetype,
@@ -66,10 +66,11 @@ const uploadToS3 = async (file, role = 'common') => {
   await s3.send(new PutObjectCommand(uploadParams));
   fs.unlinkSync(file.path); // remove local file
 
-  return `https://${config.AWS_BUCKET_NAME}.s3.${config.AWS_REGION}.amazonaws.com/${key}`;
+  return `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 };
 
 module.exports = {
   upload,
   uploadToS3,
 };
+

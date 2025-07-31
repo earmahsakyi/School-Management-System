@@ -1,12 +1,12 @@
 // utils/sendEmail.js
 const { Resend } = require('resend');
-const config = require('../config/default.json')
-const resend = new Resend(config.RESEND_API_KEY);
+// const config = require('../config/default.json')
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmail = async ({ to, subject, html }) => {
   try {
     const data = await resend.emails.send({
-      from: config.EMAIL_FROM,
+      from: process.env.EMAIL_FROM,
       to,
       subject,
       html,

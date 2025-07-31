@@ -47,7 +47,7 @@ exports.createOrUpdateAdminProfile = async (req, res) => {
   if (existingAdmin?.photo) {
     const oldKey = existingAdmin.photo.split('/').pop();
     await s3.send(new DeleteObjectCommand({
-      Bucket: config.AWS_BUCKET_NAME,
+      Bucket: process.env.AWS_BUCKET_NAME,
       Key: oldKey
     }));
   }

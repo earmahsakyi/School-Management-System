@@ -4,13 +4,13 @@ const { upload, uploadToS3 } = require('../middleware/s3Uploader');
 const auth = require('../middleware/auth');
 const Staff = require('../models/Staff'); 
 const { DeleteObjectCommand,S3Client } = require('@aws-sdk/client-s3');
-const config = require('../config/default.json');
+// const config = require('../config/default.json');
 
 const s3 = new S3Client({
-  region: config.AWS_REGION,
+  region: process.env.AWS_REGION,
   credentials: {
-    accessKeyId: config.AWS_ACCESS_KEY,
-    secretAccessKey: config.AWS_SECRET_KEY,
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_KEY,
   },
 });
 
@@ -30,7 +30,7 @@ router.delete('/remove-certificates/:id', auth, async (req, res) => {
         const key = getKeyFromUrl(certUrl);
         if (key) {
           await s3.send(new DeleteObjectCommand({
-            Bucket: config.AWS_BUCKET_NAME,
+            Bucket: process.env.AWS_BUCKET_NAME,
             Key: key,
           }));
         }
@@ -83,7 +83,7 @@ router.delete('/remove-certificate/:id/:index', auth, async (req, res) => {
     const key = getKeyFromUrl(certUrl);
     if (key) {
       await s3.send(new DeleteObjectCommand({
-        Bucket: config.AWS_BUCKET_NAME,
+        Bucket: process.env.AWS_BUCKET_NAME,
         Key: key,
       }));
     }

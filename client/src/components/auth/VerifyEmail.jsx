@@ -44,7 +44,7 @@ const VerifyEmail = () => {
        const result = await dispatch(confirmEmail(token)); // Pass token directly
        
        if (result.success) {
-           setTimeout(() => navigate('/'), 1500);
+           setTimeout(() => navigate('/login'), 1500);
            localStorage.removeItem('email')
       }
      } catch (err) {

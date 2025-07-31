@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const config = require('../config/default.json');
+// const config = require('../config/default.json');
 const { validationResult } =require('express-validator');
 const sendEmail = require('../utils/sendEmail')
 
@@ -58,7 +58,7 @@ exports.AuthUserToken = async (req, res) => {
                 
             }
         }
-        jwt.sign(payload, config.jwtSecret, {
+        jwt.sign(payload, process.env.jwtSecret, {
             expiresIn: '1d'
         },
         (err, token) => {
@@ -99,7 +99,7 @@ exports.registerUser = async (req, res) => {
             }
             
         }
-        jwt.sign(payload,config.jwtSecret, {
+        jwt.sign(payload,process.env.jwtSecret, {
             expiresIn: '1d'
         }, (err, token) =>{
             if(err) throw err;
@@ -235,7 +235,7 @@ exports.forgotPassword = async (req, res) => {
     
     
     await sendEmail({
-        from: config.EMAIL_FROM,
+        from: process.env.EMAIL_FROM,
         to: email,
         subject: 'Password Reset Verification Code',
         html: `
@@ -305,4 +305,3 @@ exports.ResetPassword = async (req, res) => {
     }
 
 }
-

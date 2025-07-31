@@ -14,14 +14,14 @@ const {
   processBatchPromotions,
   getPromotionPreview
 } = require('../utils/promotionService');
-const config = require('../config/default.json');
+// const config = require('../config/default.json');
 const { DeleteObjectCommand ,S3Client,GetObjectCommand } = require('@aws-sdk/client-s3');
 
 const s3 = new S3Client({
-  region: config.AWS_REGION,
+  region: process.env.AWS_REGION,
   credentials: {
-    accessKeyId: config.AWS_ACCESS_KEY_ID,
-    secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
 });
 
@@ -406,7 +406,7 @@ exports.updateStudentAndParent = async (req, res) => {
     // Handle new photo 
     // Utility to extract S3 key from URL
 const getS3KeyFromUrl = (url) => {
-  const baseUrl = `https://${config.AWS_BUCKET_NAME}.s3.${config.AWS_REGION}.amazonaws.com/`;
+  const baseUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/`;
   return url.startsWith(baseUrl) ? url.replace(baseUrl, '') : null;
 };
 
@@ -414,7 +414,7 @@ const getS3KeyFromUrl = (url) => {
 if (req.body.uploadedUrls?.photo) {
   if (student.photo) {
     const key = getS3KeyFromUrl(student.photo);
-    if (key) await s3.send(new DeleteObjectCommand({ Bucket: config.AWS_BUCKET_NAME, Key: key }));
+    if (key) await s3.send(new DeleteObjectCommand({ Bucket: process.env.AWS_BUCKET_NAME, Key: key }));
   }
   student.photo = req.body.uploadedUrls.photo;
 }
@@ -422,7 +422,7 @@ if (req.body.uploadedUrls?.photo) {
 if (req.body.uploadedUrls?.transcript) {
   if (student.transcript) {
     const key = getS3KeyFromUrl(student.transcript);
-    if (key) await s3.send(new DeleteObjectCommand({ Bucket: config.AWS_BUCKET_NAME, Key: key }));
+    if (key) await s3.send(new DeleteObjectCommand({ Bucket: process.env.AWS_BUCKET_NAME, Key: key }));
   }
   student.transcript = req.body.uploadedUrls.transcript;
 }
@@ -430,7 +430,7 @@ if (req.body.uploadedUrls?.transcript) {
 if (req.body.uploadedUrls?.reportCard) {
   if (student.reportCard) {
     const key = getS3KeyFromUrl(student.reportCard);
-    if (key) await s3.send(new DeleteObjectCommand({ Bucket: config.AWS_BUCKET_NAME, Key: key }));
+    if (key) await s3.send(new DeleteObjectCommand({ Bucket: process.env.AWS_BUCKET_NAME, Key: key }));
   }
   student.reportCard = req.body.uploadedUrls.reportCard;
 }
@@ -547,7 +547,7 @@ const getKeyFromUrl = (url) => {
 if (student.photo) {
   const key = getKeyFromUrl(student.photo);
   await s3.send(new DeleteObjectCommand({
-    Bucket: config.AWS_BUCKET_NAME,
+    Bucket: process.env.AWS_BUCKET_NAME,
     Key: key,
   }));
 }
@@ -555,14 +555,14 @@ if (student.photo) {
 if (student.transcript) {
   const key = getKeyFromUrl(student.transcript);
   await s3.send(new DeleteObjectCommand({
-    Bucket: config.AWS_BUCKET_NAME,
+    Bucket: process.env.AWS_BUCKET_NAME,
     Key: key,
   }));
 }
 if (student.reportCard) {
   const key = getKeyFromUrl(student.reportCard);
   await s3.send(new DeleteObjectCommand({
-    Bucket: config.AWS_BUCKET_NAME,
+    Bucket: process.env.AWS_BUCKET_NAME,
     Key: key,
   }));
 }
@@ -1107,7 +1107,7 @@ exports.downloadStudentDocument = async (req, res) => {
     const key = urlParts.pathname.substring(1); 
 
     const command = new GetObjectCommand({
-      Bucket: config.AWS_BUCKET_NAME,
+      Bucket: process.env.AWS_BUCKET_NAME,
       Key: key,
     });
 
@@ -1133,3 +1133,4 @@ exports.downloadStudentDocument = async (req, res) => {
     });
   }
 };
+config

@@ -1,14 +1,14 @@
 const Staff = require('../models/Staff');
 const generateStaffID = require('../utils/generateStaffID');
 const StaffAudit = require('../models/StaffAudit');
-const config = require('../config/default.json');
+// const config = require('../config/default.json');
 const { DeleteObjectCommand ,S3Client,GetObjectCommand } = require('@aws-sdk/client-s3');
 
 const s3 = new S3Client({
-  region: config.AWS_REGION,
+  region: process.env.AWS_REGION,
   credentials: {
-    accessKeyId: config.AWS_ACCESS_KEY_ID,
-    secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
 });
 
@@ -260,7 +260,7 @@ exports.updateStaff = async (req, res) => {
     if (req.body.uploadedUrls?.photo) {
       if (staff.photo) {
         const key = getS3KeyFromUrl(staff.photo);
-        if (key) await s3.send(new DeleteObjectCommand({ Bucket: config.AWS_BUCKET_NAME, Key: key }));
+        if (key) await s3.send(new DeleteObjectCommand({ Bucket: process.env.AWS_BUCKET_NAME, Key: key }));
       }
       staff.photo = req.body.uploadedUrls.photo;
     }
@@ -309,7 +309,7 @@ exports.deleteStaff = async (req, res) => {
    if (staff.photo) {
      const key = getKeyFromUrl(staff.photo);
      await s3.send(new DeleteObjectCommand({
-       Bucket: config.AWS_BUCKET_NAME,
+       Bucket: process.env.AWS_BUCKET_NAME,
        Key: key,
      }));
    }
@@ -320,7 +320,7 @@ exports.deleteStaff = async (req, res) => {
     const key = getKeyFromUrl(certUrl);
     if (key) {
       await s3.send(new DeleteObjectCommand({
-        Bucket: config.AWS_BUCKET_NAME,
+        Bucket: process.env.AWS_BUCKET_NAME,
         Key: key,
       }));
     }
@@ -373,7 +373,7 @@ exports.downloadStaffDocument = async (req, res) => {
     const key = urlParts.pathname.substring(1); 
 
     const command = new GetObjectCommand({
-      Bucket: config.AWS_BUCKET_NAME,
+      Bucket: process.env.AWS_BUCKET_NAME,
       Key: key,
     });
 
@@ -418,5 +418,5 @@ exports.downloadStaffDocument = async (req, res) => {
 //   } catch (err) {
 //     console.error('Get staff audit trail error:', err);
 //     res.status(500).json({ success: false, msg: 'Server Error', error: err.message });
-//   }
+//   } config
 // };
