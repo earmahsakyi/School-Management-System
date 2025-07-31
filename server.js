@@ -1,6 +1,7 @@
 const express = require('express');
 const ConnectDB = require('./config/db');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 
@@ -36,9 +37,20 @@ app.use(express.static(path.join(__dirname, 'client', 'dist')));
 
 // //  For all other routes, return React index.html (for React Router)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client', 'dist', 'index.html'));
+  const indexPath = path.join(__dirname, 'client', 'dist', 'index.html');
+  
+  // Check if file exists
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    // File doesn't exist, send a fallback response
+    res.status(404).json({ 
+      error: 'Frontend not built',
+      message: 'The React app has not been built yet',
+      path: indexPath
+    });
+  }
 });
-
 // Use Railway PORT or fallback to 5000
 const PORT = process.env.PORT || 5000;
 
