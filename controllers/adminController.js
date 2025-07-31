@@ -1,7 +1,7 @@
 const Admin = require('../models/Admin');
 const User = require('../models/User');
-const config = require('../config/default.json');
 const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
+
 
 
 // @desc    Create or update admin profile

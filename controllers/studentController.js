@@ -14,7 +14,6 @@ const {
   processBatchPromotions,
   getPromotionPreview
 } = require('../utils/promotionService');
-// const config = require('../config/default.json');
 const { DeleteObjectCommand ,S3Client,GetObjectCommand } = require('@aws-sdk/client-s3');
 
 const s3 = new S3Client({

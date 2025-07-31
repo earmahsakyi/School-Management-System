@@ -1,7 +1,6 @@
 const Staff = require('../models/Staff');
 const generateStaffID = require('../utils/generateStaffID');
 const StaffAudit = require('../models/StaffAudit');
-// const config = require('../config/default.json');
 const { DeleteObjectCommand ,S3Client,GetObjectCommand } = require('@aws-sdk/client-s3');
 
 const s3 = new S3Client({

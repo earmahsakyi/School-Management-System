@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const createError = require('http-errors');
-// const config = require('../config/default.json');
+
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION,

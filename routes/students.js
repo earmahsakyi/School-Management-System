@@ -4,7 +4,7 @@ const { upload, uploadToS3 } = require('../middleware/s3Uploader');
 const auth = require('../middleware/auth');
 const Student = require('../models/Student');
 const { DeleteObjectCommand,S3Client } = require('@aws-sdk/client-s3');
-// const config = require('../config/default.json');
+
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
