@@ -1132,4 +1132,3 @@ exports.downloadStudentDocument = async (req, res) => {
     });
   }
 };
-config
