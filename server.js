@@ -35,9 +35,9 @@ app.use('/api/tvet-financial', require('./routes/tvetFinancialReport'));
 app.use(express.static(path.join(__dirname, 'client', 'dist')));
 
 // //  For all other routes, return React index.html (for React Router)
-// app.get('*', (req, res) => {
-//   res.sendFile(path.join(__dirname, 'client', 'dist', 'index.html'));
-// });
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client', 'dist', 'index.html'));
+});
 
 // Use Railway PORT or fallback to 5000
 const PORT = process.env.PORT || 5000;
