@@ -5,8 +5,9 @@ import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DashboardLayout } from '../dashboard/DashboardLayout';
-import { Search, Download, Loader2, DollarSign, Filter, Calendar, Eye } from 'lucide-react';
+import { Search, Download, Loader2, DollarSign, Filter, Calendar, Eye, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAllStudents, clearStudentErrors } from '../../actions/studentAction';
 import { toast } from 'react-hot-toast';
@@ -24,6 +25,7 @@ const FinancialReport = () => {
   const [downloading, setDownloading] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [reportData, setReportData] = useState(null);
+  const navigate = useNavigate()
 
   // Common grade levels and class sections
   const gradeLevels = ['7', '8', '9', '10', '11', '12'];
@@ -156,6 +158,13 @@ const FinancialReport = () => {
           <DollarSign className="h-8 w-8 text-primary mr-3" />
           <h1 className="text-3xl font-bold text-foreground">Financial Report Generator</h1>
         </div>
+        <Button 
+          onClick={()=> navigate('/tvet-report')}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+            >
+             <FileText className="h-4 w-4 mr-2" />
+               Tvet Financial Report Page
+              </Button>
 
         {/* Financial Report Generation Section */}
         <Card className="mb-8">

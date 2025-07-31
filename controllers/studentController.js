@@ -3,9 +3,7 @@ const User = require('../models/User');
 const Parent = require('../models/Parent')
 const generatePassword = require('../utils/generatePassword');
 const bcrypt = require('bcryptjs');
-const fs = require('fs');
 const Grade = require('../models/Grade')
-const path = require('path');
 const sendEmail = require('../utils/sendEmail')
 const generateAdmissionNumber = require('../utils/generateAdmissionNumber');
 const Staff = require('../models/Staff')
@@ -16,6 +14,16 @@ const {
   processBatchPromotions,
   getPromotionPreview
 } = require('../utils/promotionService');
+const config = require('../config/default.json');
+const { DeleteObjectCommand ,S3Client,GetObjectCommand } = require('@aws-sdk/client-s3');
+
+const s3 = new S3Client({
+  region: config.AWS_REGION,
+  credentials: {
+    accessKeyId: config.AWS_ACCESS_KEY_ID,
+    secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
+  },
+});
 
 // @desc    Create student and parent
 // @route   POST /api/student
@@ -42,16 +50,6 @@ exports.createStudentAndParent = async (req, res) => {
       .map(([key]) => key);
 
     if (missingFields.length > 0) {
-      // Clean up any uploaded files
-      if (req.files) {
-        Object.values(req.files).forEach(fileArray => {
-          fileArray.forEach(file => {
-            if (fs.existsSync(file.path)) {
-              fs.unlinkSync(file.path);
-            }
-          });
-        });
-      }
       return res.status(400).json({
         success: false,
         msg: 'Missing required fields',
@@ -70,16 +68,6 @@ exports.createStudentAndParent = async (req, res) => {
       // Check if user already exists for parent email
       existingUser = await User.findOne({ email: parentEmail });
       if (existingUser) {
-        // Clean up any uploaded files
-        if (req.files) {
-          Object.values(req.files).forEach(fileArray => {
-            fileArray.forEach(file => {
-              if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
-              }
-            });
-          });
-        }
         return res.status(409).json({
           success: false,
           msg: 'A parent account already exists with this email'
@@ -124,27 +112,23 @@ exports.createStudentAndParent = async (req, res) => {
         };
 
         // Handle photo upload
-        if (req.files && req.files.photo) {
-          const photoFile = req.files.photo[0]; // Access the first photo file
-          console.log('Processing uploaded photo:', photoFile);
-          const photoName = path.basename(photoFile.path);
-          studentData.photo = `uploads/students/${photoName}`;
-        }
+          if (req.body.uploadedUrls?.photo) {
+          const s3PhotoUrl = req.body.uploadedUrls.photo;
+          studentData.photo = s3PhotoUrl;
+          }
 
         // Handle transcript upload
-        if (req.files && req.files.transcript) {
-          const transcriptFile = req.files.transcript[0];
-          console.log('Processing uploaded transcript:', transcriptFile);
-          const transcriptName = path.basename(transcriptFile.path);
-          studentData.transcript = `uploads/transcripts/${transcriptName}`;
-        }
+          if (req.body.uploadedUrls?.transcript) {
+          const s3TranscriptUrl = req.body.uploadedUrls.transcript;
+           studentData.transcript = s3TranscriptUrl;
+          }
 
         // Handle report card upload
-        if (req.files && req.files.reportCard) {
-          const reportCardFile = req.files.reportCard[0];
-          console.log('Processing uploaded report card:', reportCardFile);
-          const reportCardName = path.basename(reportCardFile.path);
-          studentData.reportCard = `uploads/reportcards/${reportCardName}`;
+        if(req.body.uploadedUrls?.reportCard){
+          const s3ReportCardUrl = req.body.uploadedUrls.reportCard;
+          studentData.reportCard =s3ReportCardUrl;
+
+
         }
 
         student = await Student.create(studentData);
@@ -160,16 +144,6 @@ exports.createStudentAndParent = async (req, res) => {
     }
 
     if (!student) {
-      // Clean up any uploaded files
-      if (req.files) {
-        Object.values(req.files).forEach(fileArray => {
-          fileArray.forEach(file => {
-            if (fs.existsSync(file.path)) {
-              fs.unlinkSync(file.path);
-            }
-          });
-        });
-      }
       throw new Error('Failed to generate unique admission number after 3 attempts');
     }
 
@@ -244,23 +218,6 @@ exports.createStudentAndParent = async (req, res) => {
 
   } catch (err) {
     console.error('Create student+parent robust error:', err);
-
-    // Clean up any uploaded files on error
-    if (req.files) {
-      Object.values(req.files).forEach(fileArray => {
-        fileArray.forEach(file => {
-          if (fs.existsSync(file.path)) {
-            try {
-              fs.unlinkSync(file.path);
-              console.log('Deleted uploaded file due to error:', file.path);
-            } catch (cleanupErr) {
-              console.error('Failed cleanup:', cleanupErr);
-            }
-          }
-        });
-      });
-    }
-
     res.status(500).json({
       success: false,
       msg: 'Server Error',
@@ -425,31 +382,11 @@ exports.updateStudentAndParent = async (req, res) => {
     // Find student and parent
     const student = await Student.findById(req.params.id);
     if (!student) {
-      // Clean up uploaded files (UPDATED)
-      if (req.files) {
-        Object.values(req.files).forEach(fileArray => {
-          fileArray.forEach(file => {
-            if (fs.existsSync(file.path)) {
-              fs.unlinkSync(file.path);
-            }
-          });
-        });
-      }
       return res.status(404).json({ success: false, msg: 'Student not found' });
     }
 
     const parent = await Parent.findOne({ students: student._id }).populate('user');
     if (!parent) {
-      // Clean up uploaded files (UPDATED)
-      if (req.files) {
-        Object.values(req.files).forEach(fileArray => {
-          fileArray.forEach(file => {
-            if (fs.existsSync(file.path)) {
-              fs.unlinkSync(file.path);
-            }
-          });
-        });
-      }
       return res.status(404).json({ success: false, msg: 'Parent not found' });
     }
 
@@ -467,32 +404,36 @@ exports.updateStudentAndParent = async (req, res) => {
     student.classSection = classSection !== undefined ? classSection : student.classSection;
 
     // Handle new photo 
-    if (req.files && req.files.photo) {
-      const photoFile = req.files.photo[0];
-      if (student.photo && fs.existsSync(student.photo)) {
-        fs.unlinkSync(student.photo);
-      }
-      student.photo = `uploads/students/${path.basename(photoFile.path)}`;
-    }
+    // Utility to extract S3 key from URL
+const getS3KeyFromUrl = (url) => {
+  const baseUrl = `https://${config.AWS_BUCKET_NAME}.s3.${config.AWS_REGION}.amazonaws.com/`;
+  return url.startsWith(baseUrl) ? url.replace(baseUrl, '') : null;
+};
 
-    // Handle new transcript 
-    if (req.files && req.files.transcript) {
-        const transcriptFile = req.files.transcript[0];
-        if (student.transcript && fs.existsSync(student.transcript)) {
-            fs.unlinkSync(student.transcript);
-        }
-        student.transcript = `uploads/transcripts/${path.basename(transcriptFile.path)}`;
-    }
 
-    // Handle new report card (ADDED for consistency)
-    if (req.files && req.files.reportCard) {
-        const reportCardFile = req.files.reportCard[0];
-        if (student.reportCard && fs.existsSync(student.reportCard)) {
-            fs.unlinkSync(student.reportCard);
-        }
-        student.reportCard = `uploads/reportcards/${path.basename(reportCardFile.path)}`;
-    }
+if (req.body.uploadedUrls?.photo) {
+  if (student.photo) {
+    const key = getS3KeyFromUrl(student.photo);
+    if (key) await s3.send(new DeleteObjectCommand({ Bucket: config.AWS_BUCKET_NAME, Key: key }));
+  }
+  student.photo = req.body.uploadedUrls.photo;
+}
 
+if (req.body.uploadedUrls?.transcript) {
+  if (student.transcript) {
+    const key = getS3KeyFromUrl(student.transcript);
+    if (key) await s3.send(new DeleteObjectCommand({ Bucket: config.AWS_BUCKET_NAME, Key: key }));
+  }
+  student.transcript = req.body.uploadedUrls.transcript;
+}
+
+if (req.body.uploadedUrls?.reportCard) {
+  if (student.reportCard) {
+    const key = getS3KeyFromUrl(student.reportCard);
+    if (key) await s3.send(new DeleteObjectCommand({ Bucket: config.AWS_BUCKET_NAME, Key: key }));
+  }
+  student.reportCard = req.body.uploadedUrls.reportCard;
+}
     await student.save();
 
     // Store old email to compare
@@ -578,21 +519,6 @@ exports.updateStudentAndParent = async (req, res) => {
   } catch (err) {
     console.error('Update student+parent error:', err);
 
-    // Clean up uploaded files on error (UPDATED)
-    if (req.files) {
-      Object.values(req.files).forEach(fileArray => {
-        fileArray.forEach(file => {
-          if (fs.existsSync(file.path)) {
-            try {
-              fs.unlinkSync(file.path);
-            } catch (cleanupErr) {
-              console.error('Failed cleanup:', cleanupErr);
-            }
-          }
-        });
-      });
-    }
-
     res.status(500).json({
       success: false,
       msg: 'Server Error',
@@ -612,19 +538,34 @@ exports.deleteStudentAndParent = async (req, res) => {
     }
 
     // Remove photo
-    if (student.photo && fs.existsSync(student.photo)) {
-      fs.unlinkSync(student.photo);
-    }
+    // Extract just the filename from the S3 URL
+const getKeyFromUrl = (url) => {
+  const parts = url.split('/');
+  return parts.slice(3).join('/'); // e.g., 'student/photo-abc123.jpg'
+};
 
-    // Remove transcript if exists
-    if (student.transcript && fs.existsSync(student.transcript)) {
-      fs.unlinkSync(student.transcript);
-    }
+if (student.photo) {
+  const key = getKeyFromUrl(student.photo);
+  await s3.send(new DeleteObjectCommand({
+    Bucket: config.AWS_BUCKET_NAME,
+    Key: key,
+  }));
+}
 
-    // Remove report card if exists
-    if (student.reportCard && fs.existsSync(student.reportCard)) {
-      fs.unlinkSync(student.reportCard);
-    }
+if (student.transcript) {
+  const key = getKeyFromUrl(student.transcript);
+  await s3.send(new DeleteObjectCommand({
+    Bucket: config.AWS_BUCKET_NAME,
+    Key: key,
+  }));
+}
+if (student.reportCard) {
+  const key = getKeyFromUrl(student.reportCard);
+  await s3.send(new DeleteObjectCommand({
+    Bucket: config.AWS_BUCKET_NAME,
+    Key: key,
+  }));
+}
 
     // Find parent and check how many students they have
     const parent = await Parent.findOne({ students: student._id });
@@ -1130,6 +1071,65 @@ exports.getEligibleStudentsForPromotion = async (req, res) => {
       success: false,
       msg: 'Server Error',
       error: error.message
+    });
+  }
+};
+
+exports.getStudentDocuments = async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const documents = {
+      photo: student.photo || null,
+      transcript: student.transcript || null,
+      reportCard: student.reportCard || null,
+    };
+
+    res.status(200).json({ success: true, documents });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error fetching documents', error: err.message });
+  }
+}
+
+exports.downloadStudentDocument = async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({ success: false, msg: 'Document URL is required' });
+    }
+
+    // Extract the S3 key from the URL
+    const urlParts = new URL(url);
+    const key = urlParts.pathname.substring(1); 
+
+    const command = new GetObjectCommand({
+      Bucket: config.AWS_BUCKET_NAME,
+      Key: key,
+    });
+
+    const response = await s3.send(command);
+    
+    // Set appropriate headers
+    const contentType = response.ContentType || 'application/octet-stream';
+    const contentDisposition = `attachment; filename="${key.split('/').pop()}"`;
+    
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', contentDisposition);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    
+    // Stream the file
+    response.Body.pipe(res);
+    
+  } catch (error) {
+    console.error('Download document error:', error);
+    res.status(500).json({ 
+      success: false, 
+      msg: 'Failed to download document', 
+      error: error.message 
     });
   }
 };

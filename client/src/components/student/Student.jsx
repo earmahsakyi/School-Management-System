@@ -25,7 +25,7 @@ import {
   Loader2,
   CheckCircle,
   FileText,
-  Award // Add Award icon for recommendation
+  Award 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,14 +70,14 @@ const departments = ["Arts", "Science","JHS"];
 
 // Utility function to get student avatar
 const getStudentAvatar = (student) => {
-  const API_BASE_URL = 'http://localhost:5000';
+  // const API_BASE_URL = 'http://localhost:5000';
   
   // Default avatar using student's name with random background
   let avatarSrc = `https://ui-avatars.com/api/?name=${encodeURIComponent(student?.lastName || student?.firstName || "Student")}&background=random&color=fff&size=40&rounded=true`;
   
   // If student has a photo, use it from the uploads folder
   if (student?.photo) {
-    avatarSrc = `${API_BASE_URL}/uploads/students/${student.photo.split(/[\\/]/).pop()}`;
+    avatarSrc = student.photo;
   }
   
   return avatarSrc;
@@ -195,7 +195,7 @@ const Students = () => {
             />
             <div className="flex flex-col">
               <span className="text-base font-semibold text-foreground">
-                {student.firstName} {student.lastName}
+                {student.firstName} {student.lastName} {student?.middleName || ''}
               </span>
               <span className="text-sm text-muted-foreground">
                 {student.admissionNumber}
@@ -273,6 +273,14 @@ const Students = () => {
           >
             <Trash2 className="h-4 w-4" />
           </Button>
+          <Button
+      variant="outline"
+      size="sm"
+     onClick={() => navigate(`/student/${row.original?._id}/documents`)}
+      >
+      <FileText className="h-4 w-4 mr-2" />
+         View Documents
+        </Button>                  
         </div>
       )
     },
@@ -285,6 +293,7 @@ const Students = () => {
       const matchesGlobal = globalFilter === '' || 
         student.firstName?.toLowerCase().includes(globalFilter.toLowerCase()) ||
         student.lastName?.toLowerCase().includes(globalFilter.toLowerCase()) ||
+        student.middleName?.toLowerCase().includes(globalFilter.toLowerCase()) ||''
         student.admissionNumber?.toLowerCase().includes(globalFilter.toLowerCase());
       
       const matchesGrade = gradeFilter === '' || student.gradeLevel?.toString() === gradeFilter;

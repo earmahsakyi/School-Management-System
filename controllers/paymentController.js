@@ -1,21 +1,21 @@
 // controllers/paymentController.js
 const Payment = require('../models/Payment');
 const Student = require('../models/Student'); 
-const generateReceiptPdf = require('../utils/receiptGenerator');
+const generateReceiptsPdf = require('../utils/receiptGenerator');
 
 // Create payment and generate receipt
-exports.createPaymentAndGenerateReceipt = async (req, res) => {
+// Create a new payment without generating a PDF
+exports.createPayment = async (req, res) => {
   try {
     const { studentId, amount, bankDepositNumber, academicYear, description, dateOfPayment } = req.body;
 
-    // Enhanced validation
+    // Validation
     if (!studentId || !amount || !academicYear) {
       return res.status(400).json({ 
         success: false,
         message: 'Missing required payment fields: studentId, amount, academicYear' 
       });
     }
-
     if (amount <= 0) {
       return res.status(400).json({ 
         success: false,
@@ -31,15 +31,16 @@ exports.createPaymentAndGenerateReceipt = async (req, res) => {
       });
     }
 
-    // Generate a more robust unique receipt number
+    // Generate a unique receipt number
     const timestamp = Date.now();
     const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     const receiptNumber = `REC-${timestamp}-${randomNum}`;
 
+    // Create payment
     const newPayment = new Payment({
       student: studentId,
       amount: parseFloat(amount),
-      dateOfPayment: dateOfPayment || Date.now,
+      dateOfPayment: dateOfPayment || Date.now(),
       receiptNumber,
       bankDepositNumber: bankDepositNumber || '',
       moeRegistration: 'MOE Registration',
@@ -49,42 +50,35 @@ exports.createPaymentAndGenerateReceipt = async (req, res) => {
 
     await newPayment.save();
 
-    // Generate the PDF receipt
-    const pdfBuffer = await generateReceiptPdf({
-      student: {
-        firstName: student.firstName,
-        lastName: student.lastName,
-        middleName: student.middleName || '',
-        admissionNumber: student.admissionNumber,
-        gradeLevel: student.gradeLevel,
-        department: student.department
-      },
+    // Return success response without PDF
+    res.status(201).json({
+      success: true,
+      message: 'Payment recorded successfully',
       payment: {
+        _id: newPayment._id,
+        student: {
+          _id: student._id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          admissionNumber: student.admissionNumber
+        },
         receiptNumber: newPayment.receiptNumber,
-        bankDepositNumber: newPayment.bankDepositNumber,
-        moeRegistration: newPayment.moeRegistration,
         amount: newPayment.amount,
-        dateOfPayment: newPayment.dateOfPayment.toLocaleDateString(),
+        dateOfPayment: newPayment.dateOfPayment,
+        academicYear: newPayment.academicYear,
         description: newPayment.description,
-        academicYear: newPayment.academicYear
-      },
+        bankDepositNumber: newPayment.bankDepositNumber
+      }
     });
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=receipt-${newPayment.receiptNumber}.pdf`);
-    res.send(pdfBuffer);
-
   } catch (error) {
-    console.error('Error creating payment and generating receipt:', error);
-    
-    // Handle duplicate receipt number error
+    console.error('Error creating payment:', error);
     if (error.code === 11000 && error.keyPattern?.receiptNumber) {
       return res.status(400).json({ 
         success: false,
         message: 'Receipt number already exists. Please try again.' 
       });
     }
-    
     res.status(500).json({ 
       success: false,
       message: 'Server error', 
@@ -93,6 +87,105 @@ exports.createPaymentAndGenerateReceipt = async (req, res) => {
   }
 };
 
+// Generate batch receipts for multiple payments
+exports.generateBatchReceipts = async (req, res) => {
+  try {
+    const {
+      academicYear,
+      studentId,
+      admissionNumber,
+      startDate,
+      endDate,
+      minAmount,
+      maxAmount
+    } = req.query;
+
+    // Build filter object
+    const filter = {};
+    
+    if (academicYear) filter.academicYear = academicYear;
+    if (studentId) filter.student = studentId;
+    
+    // Date range filter
+    if (startDate || endDate) {
+      filter.dateOfPayment = {};
+      if (startDate) filter.dateOfPayment.$gte = new Date(startDate);
+      if (endDate) filter.dateOfPayment.$lte = new Date(endDate);
+    }
+    
+    // Amount range filter
+    if (minAmount || maxAmount) {
+      filter.amount = {};
+      if (minAmount) filter.amount.$gte = parseFloat(minAmount);
+      if (maxAmount) filter.amount.$lte = parseFloat(maxAmount);
+    }
+
+    // If searching by admission number, find student first
+    if (admissionNumber) {
+      const student = await Student.findOne({ 
+        admissionNumber: { $regex: admissionNumber, $options: 'i' } 
+      });
+      if (student) {
+        filter.student = student._id;
+      } else {
+        return res.status(404).json({
+          success: false,
+          message: 'No students found with the specified admission number.'
+        });
+      }
+    }
+
+    // Fetch payments
+    const payments = await Payment.find(filter)
+      .populate('student', 'firstName lastName middleName admissionNumber gradeLevel department')
+      .sort({ dateOfPayment: -1 });
+
+    if (!payments || payments.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No payments found for the specified criteria.'
+      });
+    }
+
+    // Prepare receipts data for PDF generation
+    const receipts = payments.map(payment => ({
+      student: {
+        firstName: payment.student.firstName,
+        lastName: payment.student.lastName,
+        middleName: payment.student.middleName || '',
+        admissionNumber: payment.student.admissionNumber,
+        gradeLevel: payment.student.gradeLevel,
+        department: payment.student.department
+      },
+      payment: {
+        receiptNumber: payment.receiptNumber,
+        bankDepositNumber: payment.bankDepositNumber,
+        moeRegistration: payment.moeRegistration,
+        amount: payment.amount,
+        dateOfPayment: payment.dateOfPayment.toLocaleDateString(),
+        description: payment.description,
+        academicYear: payment.academicYear
+      }
+    }));
+
+    // Generate the PDF
+    const pdfBuffer = await generateReceiptsPdf({ receipts });
+
+    // Set response headers
+    const filename = `Batch_Receipts_${academicYear || 'All'}_${Date.now()}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error('Error generating batch receipts:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
 // Get all payments with pagination and filtering
 exports.getAllPayments = async (req, res) => {
   try {
@@ -353,3 +446,4 @@ exports.getPaymentStats = async (req, res) => {
     });
   }
 };
+

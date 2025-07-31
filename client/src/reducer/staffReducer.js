@@ -16,7 +16,11 @@ import {
   GET_STAFF_AUDIT_FAIL,
   CLEAR_STAFF,
   CLEAR_STAFF_ERRORS,
-  STAFF_ERROR
+  STAFF_ERROR,
+  GET_STAFF_DOCUMENTS_REQUEST,
+  GET_STAFF_DOCUMENTS_SUCCESS,
+  GET_STAFF_DOCUMENTS_FAIL,
+  CLEAR_STAFF_DOCUMENTS
 } from '../actions/types';
 
 const initialState = {
@@ -28,6 +32,9 @@ const initialState = {
   error: null,
   message: null,
   totalStaff: 0,
+  documents: null,
+  documentsLoading: false,
+  documentsError: null,
 };
 
 const staffReducer = (state = initialState, action) => {
@@ -165,6 +172,36 @@ const staffReducer = (state = initialState, action) => {
         error: payload,
         auditTrail: []
       };
+      case GET_STAFF_DOCUMENTS_REQUEST:
+  return {
+    ...state,
+    documentsLoading: true,
+    documentsError: null
+  };
+
+case GET_STAFF_DOCUMENTS_SUCCESS:
+  return {
+    ...state,
+    documentsLoading: false,
+    documents: action.payload,
+    documentsError: null
+  };
+
+case GET_STAFF_DOCUMENTS_FAIL:
+  return {
+    ...state,
+    documentsLoading: false,
+    documentsError: action.payload,
+    documents: null
+  };
+
+case CLEAR_STAFF_DOCUMENTS:
+  return {
+    ...state,
+    documents: null,
+    documentsError: null,
+    documentsLoading: false
+  };
 
     case CLEAR_STAFF:
       return {

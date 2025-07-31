@@ -1,7 +1,7 @@
 const Admin = require('../models/Admin');
 const User = require('../models/User');
-const fs = require('fs');
-const path = require('path');
+const config = require('../config/default.json');
+const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 
 // @desc    Create or update admin profile
@@ -18,10 +18,6 @@ exports.createOrUpdateAdminProfile = async (req, res) => {
       .map(([key]) => key);
 
     if (missingFields.length > 0) {
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-        console.log('Deleted uploaded file due to validation failure');
-      }
       return res.status(400).json({
         success: false,
         msg: 'Missing required fields',
@@ -41,22 +37,21 @@ exports.createOrUpdateAdminProfile = async (req, res) => {
       status
     };
 
-    // Handle photo upload
-    if (req.file) {
-      console.log('Processing uploaded file:', req.file);
-      const photoName = path.basename(req.file.path);
-      profileData.photo = `uploads/${photoName}`;
+    // Handle photo upload (from S3)
+    if (req.body.uploadedUrls?.photo) {
+  const s3PhotoUrl = req.body.uploadedUrls.photo;
+  profileData.photo = s3PhotoUrl;
 
-      // Clean up old photo if exists
-      const existingAdmin = await Admin.findOne({ user: req.user.id });
-      if (existingAdmin?.photo) {
-        const oldPath = path.join(__dirname, '..', existingAdmin.photo);
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
-          console.log('Deleted old photo:', oldPath);
-        }
-      }
-    }
+  // Optionally delete old image from S3
+  const existingAdmin = await Admin.findOne({ user: req.user.id });
+  if (existingAdmin?.photo) {
+    const oldKey = existingAdmin.photo.split('/').pop();
+    await s3.send(new DeleteObjectCommand({
+      Bucket: config.AWS_BUCKET_NAME,
+      Key: oldKey
+    }));
+  }
+}
 
     // Upsert admin profile
     const admin = await Admin.findOneAndUpdate(
@@ -65,36 +60,22 @@ exports.createOrUpdateAdminProfile = async (req, res) => {
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
 
+    // Update user profile status
     await User.findByIdAndUpdate(req.user.id, { profileUpdated: true });
-
-    // Normalize slashes
-    const adminObj = admin.toObject();
-    if (adminObj.photo) {
-      adminObj.photo = adminObj.photo.replace(/\\/g, '/');
-    }
 
     res.status(200).json({
       success: true,
-      data: adminObj
+      data: admin
     });
 
   } catch (err) {
     console.error('Admin profile error:', err);
 
-    if (req?.file?.path) {
-      try {
-        fs.unlinkSync(req.file.path);
-        console.log('Deleted uploaded file due to error');
-      } catch (cleanupErr) {
-        console.error('Failed cleanup:', cleanupErr);
-      }
-    }
-
-    res.status(500).json({ 
-  success: false,
-  msg: 'Server Error',
-  error: err.message
-});
+    res.status(500).json({
+      success: false,
+      msg: 'Server Error',
+      error: err.message
+    });
   }
 };
 

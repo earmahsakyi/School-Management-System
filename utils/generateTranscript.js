@@ -13,6 +13,18 @@ const generateTranscriptPdf = async (student, grades) => {
     const logo2Base64 = fs.readFileSync(path.join(__dirname, '../logo2.png'), 'base64');
     const page = await browser.newPage();
 
+    // Grade classification function (copied from generatePDF.js)
+    const getGradeClass = (score) => {
+      if (score === null || score === undefined || score === '') return '';
+      const num = parseFloat(score);
+      if (isNaN(num)) return '';
+      if (num >= 90) return 'grade-a';
+      if (num >= 80) return 'grade-b';
+      if (num >= 70) return 'grade-c';
+      if (num >= 60) return 'grade-d';
+      return 'grade-f';
+    };
+
     // Group grades by grade level and subject
     const gradeMap = {}; // gradeLevel -> subject -> semesterAverage
     const allSubjects = new Set();
@@ -32,12 +44,12 @@ const generateTranscriptPdf = async (student, grades) => {
     const gradeLevels = Array.from(gradeLevelsSet).sort((a, b) => a - b);
     const subjectList = Array.from(allSubjects);
 
-    // Build transcript table headers and rows
+    // Build transcript table headers and rows with grade colors
     const headerCols = gradeLevels.map(lvl => `<th>${lvl}th Grade</th>`).join('');
     const subjectRows = subjectList.map(subject => {
       const scores = gradeLevels.map(lvl => {
         const val = gradeMap[lvl]?.[subject] ?? '';
-        return `<td>${val}</td>`;
+        return `<td class="grade-cell ${getGradeClass(val)}">${val}</td>`;
       }).join('');
       return `<tr><td class="subject-cell">${subject}</td>${scores}</tr>`;
     }).join('');
@@ -187,6 +199,13 @@ body {
       background-color: #e0e0e0;
       font-weight: bold;
     }
+
+    /* Grade specific colors - TEXT COLOR ONLY (copied from generatePDF.js) */
+    .grade-cell.grade-a { color: #006600; font-weight: bold; }
+    .grade-cell.grade-b { color: #0066cc; font-weight: bold; }
+    .grade-cell.grade-c { color: #ff6600; font-weight: bold; }
+    .grade-cell.grade-d { color: #cc0000; font-weight: bold; }
+    .grade-cell.grade-f { color: #990000; font-weight: bold; background-color: #ffe6e6; }
     
     .signatures {
       margin-top: 20mm;
@@ -266,7 +285,7 @@ body {
     </div>
 
     <div class="student-info">
-      <p><strong>Name of Student:</strong> <span class="underline">${student.firstName} ${student.lastName}</span></p>
+      <p><strong>Name of Student:</strong> <span class="underline"> ${student.lastName} ${student.firstName} ${student?.middleName || ''}</span></p>
       <p><strong>Admission Number:</strong> <span class="underline">${student.admissionNumber}</span></p>
       <p><strong>Grade Last Attended:</strong> <span class="underline">${student.gradeLevel}</span></p>
       <p><strong>Year(s) Attended:</strong> <span class="underline">${fromYear} – ${toYear}</span></p>

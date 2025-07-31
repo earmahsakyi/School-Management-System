@@ -16,12 +16,16 @@ const parentSchema = new mongoose.Schema({
     required: [true, "Occupation  is required"],
     trim: true
   },
-  email: {
+ email: {
     type: String,
     unique: true,
-    lowercase: true,
-    trim: true,
-    default: '',
+    sparse: true, 
+    validate: {
+      validator: function(v) {
+        return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      },
+      message: 'Please enter a valid email address'
+    }
   },
   students: [{
     type: mongoose.Schema.Types.ObjectId,

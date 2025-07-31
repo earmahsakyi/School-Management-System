@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, UserPlus, BookPlus, CalendarPlus, FileText } from 'lucide-react';
+import {  UserPlus, BookPlus, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AddStudentModal } from './AddStudentModal';
 import { AddStaffModal } from '../staff/AddStaffModal';
+import AddGradeModal  from '../grade/AddGradeModal';
 
 const quickActions = [
   {
@@ -24,26 +25,20 @@ const quickActions = [
     action: 'add-staff',
   },
   {
-    title: 'Schedule Event',
-    description: 'Add calendar event',
-    icon: CalendarPlus,
+    title: 'Add Grade',
+    description: 'Record a new Grade ',
+    icon: BookPlus,
     color: 'text-academic-warning',
     bgColor: 'bg-academic-warning/10',
-    action: 'add-event',
+    action: 'add-grade',
   },
-  {
-    title: 'Generate Report',
-    description: 'Create new report',
-    icon: FileText,
-    color: 'text-academic-danger',
-    bgColor: 'bg-academic-danger/10',
-    action: 'generate-report',
-  },
+ 
 ];
 
 export function QuickActions() {
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const [isAddGradeOpen, setIsAddGradeOpen] = useState(false);
 
   const handleAction = (action) => {
     switch (action) {
@@ -53,7 +48,11 @@ export function QuickActions() {
       case 'add-staff':
         setIsAddStaffOpen(true);
         break;
+      case 'add-grade':
+        setIsAddGradeOpen(true);
+        break;
       
+
       default:
         console.log(`Action: ${action}`);
     }
@@ -113,6 +112,12 @@ export function QuickActions() {
       open={isAddStaffOpen}
       onOpenChange={setIsAddStaffOpen}
       />
+      <AddGradeModal
+      open={isAddGradeOpen}
+      onOpenChange={setIsAddGradeOpen}
+      />
+   
+
     </>
   );
 }

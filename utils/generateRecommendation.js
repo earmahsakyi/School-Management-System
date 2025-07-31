@@ -207,7 +207,7 @@ body {
     </div>
 
     <div class="student-info">
-      <p><strong>This is to introduce the bearer</strong> <span class="underline">${student.firstName} ${student.lastName}</span></p>
+      <p><strong>This is to introduce the bearer</strong> <span class="underline"> ${student.lastName} ${student.firstName} ${student?.middleName || ''}</span></p>
       <p>as a bona fide graduate of Voinjama Multilateral High School who now desires to</p>
       <p><span class="filled-line">${purpose}</span></p>
       

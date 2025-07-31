@@ -29,7 +29,10 @@ import FinancialReport from './components/staff/FinancialReport';
 import PromotionDashboard from './components/dashboard/PromotionDasboard';
 import TvetPaymentsPage from './components/payment/TvetPaymentPage';
 import ParentDashboard from './components/dashboard/ParentDashboard';
+import TvetFinancialReport from './components/staff/TvetFinancialReport';
  import { loadUser } from './actions/authAction'; 
+ import StaffDocuments from './components/staff/StaffDocuments';
+ import StudentDocuments from './components/student/StudentDocuments';
  
 
 const AppInner = () => {
@@ -69,6 +72,9 @@ const AppInner = () => {
       <Route path="/other-payments" element={<PrivateRoute element={OtherPayment} />} />
       <Route path="/tvet-payments" element={<PrivateRoute element={TvetPaymentsPage} />} />
       <Route path="/parent-dashboard" element={<PrivateRoute element={ParentDashboard} />} />
+      <Route path="/tvet-report" element={<PrivateRoute element={TvetFinancialReport} />} />
+      <Route path="/staff/:id/documents" element={<PrivateRoute element={StaffDocuments} />} />
+      <Route path="/student/:id/documents" element={<PrivateRoute element={StudentDocuments} />} />
  
     </Routes>
   );

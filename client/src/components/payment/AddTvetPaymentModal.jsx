@@ -12,16 +12,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 // Predefined list of payment descriptions
 const PAYMENT_DESCRIPTIONS = [
-  'Interview and Registeration '  ,               
-'Auto Mechanic',                                      
-'Agriculture',                                                
-'Catering and Pasteries',                                        
-'Carpentry (wood work)',                                       
-'electricity',                                                    
-'ICT',                                          
-'Plumbing',                                           
-'Tile Layering',                                      
-'Masonry', 
+  'Interview and Registeration',
+  'Auto Mechanic',
+  'Agriculture',
+  'Catering and Pasteries',
+  'Carpentry (wood work)',
+  'electricity',
+  'ICT',
+  'Plumbing',
+  'Tile Layering',
+  'Masonry',
 ];
 
 const AddTvetPaymentModal = ({ open, onOpenChange, onSuccess }) => {
@@ -136,7 +136,7 @@ const AddTvetPaymentModal = ({ open, onOpenChange, onSuccess }) => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/tvet/generate-receipt', {
+      const response = await fetch('/api/tvet', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -157,17 +157,6 @@ const AddTvetPaymentModal = ({ open, onOpenChange, onSuccess }) => {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to create TVET payment');
       }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `tvet-receipt-${formData.depositNumber}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
 
       toast.success('TVET payment recorded successfully!');
       setFormData({
@@ -192,8 +181,8 @@ const AddTvetPaymentModal = ({ open, onOpenChange, onSuccess }) => {
   };
 
   return (
-     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[80vh]">  {/* Add max-h-[80vh] here */}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
@@ -204,8 +193,8 @@ const AddTvetPaymentModal = ({ open, onOpenChange, onSuccess }) => {
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="h-[70vh] pr-4">  {/* Add ScrollArea wrapper */}
-          <form onSubmit={handleSubmit} className="space-y-4 pb-4">  {/* Add pb-4 for bottom padding */}
+        <ScrollArea className="max-h-[60vh] pr-4">
+          <form onSubmit={handleSubmit} className="space-y-4 pb-6">
             {/* Deposit Number */}
             <div className="space-y-2">
               <Label htmlFor="depositNumber">Deposit Number *</Label>
@@ -400,29 +389,30 @@ const AddTvetPaymentModal = ({ open, onOpenChange, onSuccess }) => {
                 )}
               </p>
             </div>
+
+            {/* DialogFooter inside ScrollArea */}
+            <DialogFooter className="pt-4 sticky bottom-0 bg-white">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Recording...
+                  </>
+                ) : (
+                  'Record Payment'
+                )}
+              </Button>
+            </DialogFooter>
           </form>
         </ScrollArea>
-
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isSubmitting} onClick={handleSubmit}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Recording...
-              </>
-            ) : (
-              'Record Payment'
-            )}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

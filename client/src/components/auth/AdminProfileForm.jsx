@@ -144,11 +144,15 @@ const AdminProfileForm = () => {
                   <div className="relative group hover:scale-105 transition">
                     <div className="w-36 h-36 rounded-full border-4 border-primary/30 bg-muted overflow-hidden flex items-center justify-center shadow-inner">
                       {photoPreview ? (
-                        <img src={photoPreview} alt="Profile" className="w-full h-full object-cover" />
-                      ) : (
-                        <Camera className="h-14 w-14 text-muted-foreground" />
-                      )}
-                    </div>
+                          <img src={photoPreview} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          <img
+                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(form.watch('fullName') || 'Admin')}`}
+                            alt="Generated Avatar"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                     </div>
                     <Button
                       type="button"
                       size="sm"

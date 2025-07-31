@@ -1,18 +1,17 @@
-// controllers/paymentController.js
 const OtherPayment = require('../models/OtherPayment');
 const Student = require('../models/Student'); 
-const generateReceiptPdf = require('../utils/OtherPayment');
+const { generateReceiptPdf, generateBatchReceiptsPdf } = require('../utils/OtherPayment');
 
-// Create payment and generate receipt
-exports.createPaymentAndGenerateReceipt = async (req, res) => {
+// Create payment (no PDF generation)
+exports.createPayment = async (req, res) => {
   try {
-    const { studentId, amount, bankDepositNumber, academicYear, description,paymentOf,dateOfPayment } = req.body;
+    const { studentId, amount, bankDepositNumber, academicYear, description, paymentOf, dateOfPayment } = req.body;
 
     // Enhanced validation
-    if (!studentId || !amount || !academicYear) {
+    if (!studentId || !amount || !academicYear || !paymentOf) {
       return res.status(400).json({ 
         success: false,
-        message: 'Missing required payment fields: studentId, amount, academicYear' 
+        message: 'Missing required payment fields: studentId, amount, academicYear, paymentOf' 
       });
     }
 
@@ -31,7 +30,7 @@ exports.createPaymentAndGenerateReceipt = async (req, res) => {
       });
     }
 
-    // Generate a more robust unique receipt number
+    // Generate a unique receipt number
     const timestamp = Date.now();
     const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     const receiptNumber = `REC-${timestamp}-${randomNum}`;
@@ -39,45 +38,25 @@ exports.createPaymentAndGenerateReceipt = async (req, res) => {
     const newPayment = new OtherPayment({
       student: studentId,
       amount: parseFloat(amount),
-      dateOfPayment: new Date(),
+      dateOfPayment: dateOfPayment ? new Date(dateOfPayment) : new Date(),
       receiptNumber,
       bankDepositNumber: bankDepositNumber || '',
-      paymentOf: paymentOf || '',
-      dateOfPayment: dateOfPayment || Date.now,
-      description: description || 'Academic Payment',
+      paymentOf: paymentOf.trim(),
+      description: description || 'Other Payment',
       academicYear: academicYear.trim()
     });
 
     await newPayment.save();
 
-    // Generate the PDF receipt
-    const pdfBuffer = await generateReceiptPdf({
-      student: {
-        firstName: student.firstName,
-        lastName: student.lastName,
-        admissionNumber: student.admissionNumber,
-        gradeLevel: student.gradeLevel,
-        department: student.department
-      },
-      payment: {
-        receiptNumber: newPayment.receiptNumber,
-        bankDepositNumber: newPayment.bankDepositNumber,
-        paymentOf: newPayment.paymentOf,
-        amount: newPayment.amount,
-        dateOfPayment: newPayment.dateOfPayment.toLocaleDateString(),
-        description: newPayment.description,
-        academicYear: newPayment.academicYear
-      },
+    res.json({
+      success: true,
+      message: 'Payment created successfully',
+      payment: newPayment
     });
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=receipt-${newPayment.receiptNumber}.pdf`);
-    res.send(pdfBuffer);
-
   } catch (error) {
-    console.error('Error creating payment and generating receipt:', error);
+    console.error('Error creating payment:', error);
     
-    // Handle duplicate receipt number error
     if (error.code === 11000 && error.keyPattern?.receiptNumber) {
       return res.status(400).json({ 
         success: false,
@@ -85,6 +64,78 @@ exports.createPaymentAndGenerateReceipt = async (req, res) => {
       });
     }
     
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error', 
+      error: error.message 
+    });
+  }
+};
+
+// Generate batch receipts (four per page)
+exports.generateBatchReceipts = async (req, res) => {
+  try {
+    const {
+      academicYear,
+      studentId,
+      admissionNumber,
+      startDate,
+      endDate,
+      minAmount,
+      maxAmount
+    } = req.query;
+
+    // Build filter object
+    const filter = {};
+    
+    if (academicYear) filter.academicYear = academicYear;
+    if (studentId) filter.student = studentId;
+    
+    if (startDate || endDate) {
+      filter.dateOfPayment = {};
+      if (startDate) filter.dateOfPayment.$gte = new Date(startDate);
+      if (endDate) filter.dateOfPayment.$lte = new Date(endDate);
+    }
+    
+    if (minAmount || maxAmount) {
+      filter.amount = {};
+      if (minAmount) filter.amount.$gte = parseFloat(minAmount);
+      if (maxAmount) filter.amount.$lte = parseFloat(maxAmount);
+    }
+
+    if (admissionNumber) {
+      const student = await Student.findOne({ 
+        admissionNumber: { $regex: admissionNumber, $options: 'i' } 
+      });
+      if (student) {
+        filter.student = student._id;
+      } else {
+        return res.status(404).json({
+          success: false,
+          message: 'No student found with the provided admission number'
+        });
+      }
+    }
+
+    const payments = await OtherPayment.find(filter)
+      .populate('student', 'firstName lastName middleName admissionNumber gradeLevel classSection department')
+      .sort({ createdAt: -1 });
+
+    if (payments.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No payments found for the specified filters'
+      });
+    }
+
+    const pdfBuffer = await generateBatchReceiptsPdf(payments);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename=batch-receipts-${new Date().getTime()}.pdf`);
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error('Error generating batch receipts:', error);
     res.status(500).json({ 
       success: false,
       message: 'Server error', 
@@ -118,21 +169,18 @@ exports.getAllPayments = async (req, res) => {
     if (academicYear) filter.academicYear = academicYear;
     if (studentId) filter.student = studentId;
     
-    // Date range filter
     if (startDate || endDate) {
       filter.dateOfPayment = {};
       if (startDate) filter.dateOfPayment.$gte = new Date(startDate);
       if (endDate) filter.dateOfPayment.$lte = new Date(endDate);
     }
     
-    // Amount range filter
     if (minAmount || maxAmount) {
       filter.amount = {};
       if (minAmount) filter.amount.$gte = parseFloat(minAmount);
       if (maxAmount) filter.amount.$lte = parseFloat(maxAmount);
     }
 
-    // If searching by admission number, find student first
     if (admissionNumber) {
       const student = await Student.findOne({ 
         admissionNumber: { $regex: admissionNumber, $options: 'i' } 
@@ -140,7 +188,6 @@ exports.getAllPayments = async (req, res) => {
       if (student) {
         filter.student = student._id;
       } else {
-        // No student found with that admission number
         return res.json({
           success: true,
           payments: [],
@@ -222,7 +269,7 @@ exports.getPaymentById = async (req, res) => {
 exports.updatePayment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { amount, bankDepositNumber, description, academicYear,paymentOf } = req.body;
+    const { amount, bankDepositNumber, description, academicYear, paymentOf } = req.body;
 
     const payment = await OtherPayment.findById(id);
     if (!payment) {
@@ -254,7 +301,8 @@ exports.updatePayment = async (req, res) => {
     if (academicYear !== undefined) {
       payment.academicYear = academicYear.trim();
     }
-     if (paymentOf !== undefined) {
+    
+    if (paymentOf !== undefined) {
       payment.paymentOf = paymentOf.trim();
     }
 
@@ -332,7 +380,7 @@ exports.getPaymentStats = async (req, res) => {
         { $group: { _id: null, avg: { $avg: '$amount' } } }
       ]),
       OtherPayment.find(filter)
-        .populate('student', 'firstName  lastName middleName classSection admissionNumber')
+        .populate('student', 'firstName lastName middleName classSection admissionNumber')
         .sort({ createdAt: -1 })
         .limit(5)
     ]);

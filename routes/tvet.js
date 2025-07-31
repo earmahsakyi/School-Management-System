@@ -1,21 +1,26 @@
 const express = require('express');
-const { 
-  createTvetPaymentAndGenerateReceipt,
+const {
+  createTvetPayment, 
   getAllTvetPayments,
   getTvetPaymentById,
   updateTvetPayment,
   deleteTvetPayment,
   getTvetPaymentStats,
+  generateBatchTvetReceipts, 
   regenerateTvetReceipt
 } = require('../controllers/tvetController');
 
 const router = express.Router();
 
-// Create TVET payment and generate receipt
-router.post('/generate-receipt', createTvetPaymentAndGenerateReceipt);
+// Create TVET payment (no immediate receipt generation)
+router.post('/', createTvetPayment); 
+
+// Generate batch TVET receipts
+router.get('/batch-receipts', generateBatchTvetReceipts); 
 
 // Get all TVET payments with filtering and pagination
 router.get('/', getAllTvetPayments);
+
 
 // Get TVET payment statistics
 router.get('/stats', getTvetPaymentStats);

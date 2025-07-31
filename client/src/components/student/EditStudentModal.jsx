@@ -73,10 +73,10 @@ export function EditStudentModal({
 
   // Utility function to get student avatar
   const getStudentAvatar = (student) => {
-    const API_BASE_URL = 'http://localhost:5000';
+   
     
     if (student?.photo) {
-      return `${API_BASE_URL}/uploads/students/${student.photo.split(/[\\/]/).pop()}`;
+      return student.photo;
     }
     
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(student?.lastName || student?.firstName || "Student")}&background=random&color=fff&size=128&rounded=true`;

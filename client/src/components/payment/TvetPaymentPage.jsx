@@ -13,7 +13,8 @@ import {
   Download,
   School,
   TrendingUp,
-  BookOpen
+  BookOpen,
+   Printer,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -728,6 +729,169 @@ export default function TvetPaymentsPage() {
     }
   };
 
+  //batch printing
+   const handleGenerateBatchReceipts = async () => {
+      try {
+        setLoading(true);
+  
+        const queryParams = new URLSearchParams({
+          ...Object.fromEntries(
+            Object.entries(filters).filter(([key, value]) => {
+              if (key === 'academicYear' && value === 'all') return false;
+              return value && value.trim() !== '';
+            })
+          ),
+        });
+  
+        const response = await fetch(`/api/tvet/batch-receipts?${queryParams}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+  
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to generate batch receipts');
+        }
+  
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+  
+        // Method 1: Try direct window.open approach first
+        try {
+          const printWindow = window.open(url, '_blank');
+          if (printWindow) {
+            printWindow.addEventListener('load', () => {
+              setTimeout(() => {
+                printWindow.print();
+                toast.success("Print dialog opened for batch receipts!");
+              }, 500);
+            });
+            
+            // Cleanup after some time
+            setTimeout(() => {
+              window.URL.revokeObjectURL(url);
+            }, 10000);
+            
+            return; // Exit early if this method works
+          }
+        } catch (error) {
+          console.log('Window.open method failed, trying iframe method:', error);
+        }
+  
+        // Method 2: Fallback to iframe approach with better timing
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.top = '-9999px';
+        iframe.style.left = '-9999px';
+        iframe.style.width = '1px';
+        iframe.style.height = '1px';
+        iframe.style.border = 'none';
+        iframe.src = url;
+        
+        document.body.appendChild(iframe);
+  
+        // Better event handling for iframe
+        const handleIframeLoad = () => {
+          setTimeout(() => {
+            try {
+              if (iframe.contentWindow) {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+                toast.success("Print dialog opened for batch receipts!");
+              }
+            } catch (error) {
+              console.error('Print error:', error);
+              // Fallback: download the file instead
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `batch-receipts-${new Date().getTime()}.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              toast.success("PDF downloaded successfully!");
+            }
+          }, 1000); // Increased delay to ensure PDF is fully loaded
+        };
+  
+        // Add load event listener
+        iframe.addEventListener('load', handleIframeLoad);
+        
+        // Cleanup function
+        const cleanup = () => {
+          try {
+            if (iframe && iframe.parentNode) {
+              iframe.removeEventListener('load', handleIframeLoad);
+              document.body.removeChild(iframe);
+            }
+            window.URL.revokeObjectURL(url);
+          } catch (error) {
+            console.error('Cleanup error:', error);
+          }
+        };
+  
+        // Cleanup after longer delay to ensure print dialog has time to open
+        setTimeout(cleanup, 15000);
+  
+      } catch (error) {
+        console.error('Batch receipt generation error:', error);
+        toast.error(error.message || "Failed to generate batch receipts");
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    //handle upload
+     const handleDownloadBatchReceipts = async () => {
+        try {
+          setLoading(true);
+    
+          const queryParams = new URLSearchParams({
+            ...Object.fromEntries(
+              Object.entries(filters).filter(([key, value]) => {
+                if (key === 'academicYear' && value === 'all') return false;
+                return value && value.trim() !== '';
+              })
+            ),
+          });
+    
+          const response = await fetch(`/api/tvet/batch-receipts?${queryParams}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+    
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to generate batch receipts');
+          }
+    
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          
+          // Create download link
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `batch-receipts-${new Date().toISOString().split('T')[0]}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          // Cleanup
+          window.URL.revokeObjectURL(url);
+          
+          toast.success("Batch receipts downloaded successfully!");
+    
+        } catch (error) {
+          console.error('Batch receipt download error:', error);
+          toast.error(error.message || "Failed to download batch receipts");
+        } finally {
+          setLoading(false);
+        }
+      };
+
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
@@ -1050,6 +1214,33 @@ export default function TvetPaymentsPage() {
               <Button type="button" onClick={handleSearch} disabled={loading}>
                 Apply Filters
               </Button>
+              <Button onClick={handleGenerateBatchReceipts} disabled={loading || payments.length === 0}>
+               {loading ? (
+                <>
+                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                 Generating...
+                   </>
+                    ) : (
+                   <>
+                 <Printer className="h-4 w-4 mr-2" />
+                 Print Receipts
+                </>
+                 )}
+            </Button>
+                  <Button 
+                   variant="outline" 
+                   onClick={handleDownloadBatchReceipts} 
+                   disabled={loading || payments.length === 0}
+                 >
+                   {loading ? (
+                     <>
+                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                       Downloading...
+                     </>
+                   ) : (
+                     'Download Receipts'
+                   )}
+                 </Button>           
             </div>
           </CardContent>
         </Card>

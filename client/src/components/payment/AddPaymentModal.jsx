@@ -77,7 +77,7 @@ const AddPaymentModal = ({ open, onOpenChange, onSuccess }) => {
         description: data.description.trim() || 'Academic Payment'
       };
 
-      // Make API call to create payment and generate receipt
+      // Make API call to create payment (no PDF generation)
       const response = await fetch('/api/payments/generate-receipt', {
         method: 'POST',
         headers: {
@@ -91,19 +91,8 @@ const AddPaymentModal = ({ open, onOpenChange, onSuccess }) => {
         throw new Error(errorData.message || 'Failed to create payment');
       }
 
-      // Handle PDF download
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `receipt-${Date.now()}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      toast.success("Payment recorded successfully and receipt downloaded!");
+      const result = await response.json();
+      toast.success("Payment recorded successfully!");
       onSuccess();
       onOpenChange(false);
       resetForm();
@@ -415,7 +404,7 @@ const AddPaymentModal = ({ open, onOpenChange, onSuccess }) => {
                   ) : (
                     <>
                       <Receipt className="h-4 w-4" />
-                      Create Payment & Download Receipt
+                      Record Payment
                     </>
                   )}
                 </Button>

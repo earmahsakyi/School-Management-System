@@ -1,60 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const { imageFileFilter, pdfFileFilter } = require('../middleware/studentStaffUploads');
-const createError = require('http-errors');
+const { upload, uploadToS3 } = require('../middleware/s3Uploader'); 
 const auth = require('../middleware/auth');
-const Staff = require('../models/Staff'); // Fixed: Import correct model
-const fs = require('fs');
-const path = require('path');
-const { createStaff, getAllStaff, getStaffById, searchStaff, deleteStaff, updateStaff, getStaffAuditTrail } = require('../controllers/staffController');
+const Staff = require('../models/Staff'); 
+const { DeleteObjectCommand,S3Client } = require('@aws-sdk/client-s3');
+const config = require('../config/default.json');
 
-const uploadMultipleFiles = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      let folder;
-      if (file.fieldname === 'photo') {
-        folder = 'staff';
-      } else if (file.fieldname === 'certificates') { // Fixed: plural form
-        folder = 'certificate';
-      } 
-      else {
-        return cb(createError(400, 'Invalid field name for file upload'), false);
-      }
-      
-      const uploadDir = path.join(__dirname, `../uploads/${folder}/`);
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      if (!req.user?.id) {
-        return cb(createError(401, 'User not authenticated'), false);
-      }
-      const ext = path.extname(file.originalname).toLowerCase();
-      const filename = `${req.user.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}${ext}`;
-      cb(null, filename);
-    }
-  }),
-  fileFilter: (req, file, cb) => {
-    if (file.fieldname === 'photo') {
-      imageFileFilter(req, file, cb);
-    } else if (file.fieldname === 'certificates') { //  Fixed: plural form
-      pdfFileFilter(req, file, cb);
-    } else {
-      cb(createError(400, 'Invalid file type or field for upload'), false);
-    }
+const s3 = new S3Client({
+  region: config.AWS_REGION,
+  credentials: {
+    accessKeyId: config.AWS_ACCESS_KEY,
+    secretAccessKey: config.AWS_SECRET_KEY,
   },
-  limits: {
-    fileSize: 2 * 1024 * 1024 // 2 MB per file
-  }
-}).fields([
-  { name: 'photo', maxCount: 1 },
-  { name: 'certificates', maxCount: 5 }, //  Fixed: Allow multiple certificates
-]);
+});
 
-//  Updated: Handle multiple certificates removal
+const { createStaff, getAllStaff, getStaffById, searchStaff, deleteStaff, updateStaff, getStaffDocuments,downloadStaffDocument } = require('../controllers/staffController');
+
+
+// Handle multiple certificates removal
 router.delete('/remove-certificates/:id', auth, async (req, res) => {
   try {
     const staff = await Staff.findById(req.params.id);
@@ -62,34 +25,41 @@ router.delete('/remove-certificates/:id', auth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Staff not found' });
     }
 
-    // Remove all certificate files
-    if (staff.certificates && Array.isArray(staff.certificates)) {
-      staff.certificates.forEach(certPath => {
-        if (fs.existsSync(certPath)) {
-          fs.unlinkSync(certPath);
+    if (Array.isArray(staff.certificates) && staff.certificates.length > 0) {
+      for (const certUrl of staff.certificates) {
+        const key = getKeyFromUrl(certUrl);
+        if (key) {
+          await s3.send(new DeleteObjectCommand({
+            Bucket: config.AWS_BUCKET_NAME,
+            Key: key,
+          }));
         }
+      }
+
+      staff.certificates = [];
+      await staff.save();
+
+      return res.status(200).json({
+        success: true,
+        message: 'Certificates removed from S3 and database',
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'No certificates found to remove',
       });
     }
 
-    staff.certificates = [];
-    await staff.save();
-
-    return res.status(200).json({
-      success: true,
-      message: 'All certificates removed successfully'
-    });
-
   } catch (error) {
-    console.error('Remove certificates error:', error);
-    return res.status(500).json({
+    console.error('Certificates deletion failed:', error);
+    res.status(500).json({
       success: false,
-      message: 'Server error during certificates removal',
-      error: error.message
+      message: 'Error removing certificates',
+      error: error.message,
     });
   }
 });
-
-// New: Remove specific certificate by index
+//  Remove specific certificate by index
 router.delete('/remove-certificate/:id/:index', auth, async (req, res) => {
   try {
     const staff = await Staff.findById(req.params.id);
@@ -98,21 +68,33 @@ router.delete('/remove-certificate/:id/:index', auth, async (req, res) => {
     }
 
     const certIndex = parseInt(req.params.index);
-    if (certIndex < 0 || certIndex >= staff.certificates.length) {
+    if (
+      isNaN(certIndex) ||
+      certIndex < 0 ||
+      !Array.isArray(staff.certificates) ||
+      certIndex >= staff.certificates.length
+    ) {
       return res.status(400).json({ success: false, message: 'Invalid certificate index' });
     }
 
-    const certPath = staff.certificates[certIndex];
-    if (fs.existsSync(certPath)) {
-      fs.unlinkSync(certPath);
+    const certUrl = staff.certificates[certIndex];
+
+    // Extract S3 key from the URL
+    const key = getKeyFromUrl(certUrl);
+    if (key) {
+      await s3.send(new DeleteObjectCommand({
+        Bucket: config.AWS_BUCKET_NAME,
+        Key: key,
+      }));
     }
 
+    // Remove the certificate from the array
     staff.certificates.splice(certIndex, 1);
     await staff.save();
 
     return res.status(200).json({
       success: true,
-      message: 'Certificate removed successfully'
+      message: 'Certificate removed from S3 and database successfully',
     });
 
   } catch (error) {
@@ -120,17 +102,93 @@ router.delete('/remove-certificate/:id/:index', auth, async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Server error during certificate removal',
-      error: error.message
+      error: error.message,
     });
   }
 });
 
-router.post('/', auth, uploadMultipleFiles, createStaff);
+
+router.post('/', auth, upload,
+  async (req, res, next) => {
+  try {
+    const files = req.files;
+    const uploadedUrls = {};
+    const role = 'staff';
+
+    for (const field in files) {
+      if (field === 'certificates') {
+        // Handle multiple certificates
+        const certificateUrls = [];
+        for (const file of files[field]) {
+          const url = await uploadToS3(file, role);
+          certificateUrls.push(url);
+        }
+         
+        uploadedUrls[field] = certificateUrls; // Array of URLs
+      } else {
+        // Handle single files (photo, transcript, etc.)
+        const file = files[field][0];
+        const url = await uploadToS3(file, role);
+        uploadedUrls[field] = url; // Single URL
+      }
+    }
+
+    req.body.uploadedUrls = uploadedUrls;
+    next();
+  } catch (err) {
+    console.error('File upload error:', err.message || "server error");
+    res.status(500).json({ 
+      success: false, 
+      msg: 'File upload failed', 
+      error: err.message 
+    });
+  }
+},
+  createStaff);
+router.get('/staff-documents/:id',auth,getStaffDocuments)
+router.get('/download-document', auth, downloadStaffDocument);
 router.get('/', auth, getAllStaff);
 router.get('/search', auth, searchStaff);
-router.get('/:id/audit', auth, getStaffAuditTrail);
+// router.get('/:id/audit', auth, getStaffAuditTrail);
 router.get('/:id', auth, getStaffById);
-router.put('/:id', auth, uploadMultipleFiles, updateStaff);
+router.put('/:id', auth,
+   upload,
+ async (req, res, next) => {
+  try {
+    const files = req.files;
+    const uploadedUrls = {};
+    const role = 'staff';
+
+    for (const field in files) {
+      if (field === 'certificates') {
+        // Handle multiple certificates
+        const certificateUrls = [];
+        for (const file of files[field]) {
+          const url = await uploadToS3(file, role);
+          certificateUrls.push(url);
+        }
+        uploadedUrls[field] = certificateUrls; // Array of URLs
+      } else {
+        // Handle single files (photo, transcript, etc.)
+        const file = files[field][0];
+        const url = await uploadToS3(file, role);
+        uploadedUrls[field] = url; // Single URL
+      }
+    }
+
+    req.body.uploadedUrls = uploadedUrls;
+    next();
+  } catch (err) {
+    console.error('File upload error:', err.message || "server error");
+    res.status(500).json({ 
+      success: false, 
+      msg: 'File upload failed', 
+      error: err.message 
+    });
+  }
+}, 
+   updateStaff);
+
 router.delete('/:id', auth, deleteStaff);
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const Grade = require('../models/Grade');
 const Student = require('../models/Student');
 const Parent = require('../models/Parent');
+const mongoose = require('mongoose');
 
 // Helper function to calculate semester average
 const calculateSemesterAverage = (subject, term) => {
@@ -842,61 +843,36 @@ const getStudentPerformance = async (req, res) => {
 };
 
 // Search students
+// Adjust based on your model imports
 const searchStudents = async (req, res) => {
   try {
-    console.log('Search students called with user:', req.user?._id);
-    console.log('Query params:', req.query);
-
     
-    const { query } = req.query;
-    
-    // Find the parent document associated with the authenticated user
-    const parent = await Parent.findOne({ user: req.user._id }).select('students');
-  
-    
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized: User not authenticated'
+      });
+    }
+    const userId = new mongoose.Types.ObjectId(req.user.id); // Use req.user.id
+    const parent = await Parent.findOne({ user: userId }).select('students');
     if (!parent) {
       return res.status(404).json({
         success: false,
         message: 'Parent account not found'
       });
     }
-
-    // If no students are linked to the parent
-    if (!parent.students || parent.students.length === 0) {
-      return res.json({
-        success: true,
-        data: []
-      });
+    const { query } = req.query;
+    let studentsQuery = Student.find({ _id: { $in: parent.students } });
+    if (query && query !== 'all') {
+      studentsQuery = studentsQuery.or([
+        { firstName: { $regex: query, $options: 'i' } },
+        { lastName: { $regex: query, $options: 'i' } },
+        { middleName: { $regex: query, $options: 'i' } },
+        { admissionNumber: { $regex: query, $options: 'i' } }
+      ]);
     }
-
-    // Build the query to find students
-    const studentQuery = {
-      _id: { $in: parent.students } // Only fetch students linked to this parent
-    };
-
-    // If a search query is provided and it's not "all", apply text search
-    if (query && query.trim() !== '' && query.trim().toLowerCase() !== 'all') {
-      studentQuery.$and = [
-        { _id: { $in: parent.students } },
-        {
-          $or: [
-            { firstName: { $regex: query, $options: 'i' } },
-            { lastName: { $regex: query, $options: 'i' } },
-            { middleName: { $regex: query, $options: 'i' } },
-            { admissionNumber: { $regex: query, $options: 'i' } }
-          ]
-        }
-      ];
-    }
-
-    console.log('Student query:', JSON.stringify(studentQuery, null, 2));
-
-    const students = await Student.find(studentQuery)
-      .select('firstName lastName middleName admissionNumber gradeLevel department classSection');
-
-    console.log('Found students:', students.length);
-
-    res.json({
+    const students = await studentsQuery.select('firstName lastName middleName admissionNumber gradeLevel department classSection');
+    res.status(200).json({
       success: true,
       data: students
     });
@@ -908,6 +884,7 @@ const searchStudents = async (req, res) => {
     });
   }
 };
+
 
 module.exports = {
   createGrade,

@@ -21,6 +21,7 @@ import {
   Filter,
   AlertCircle,
   Loader2,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getAllStaff, deleteStaff, clearStaffErrors } from '../../actions/staffAction';
+import { useNavigate } from 'react-router-dom';
+
+
 
 const departments = ['Arts', 'Science', 'Administration', 'Other'];
 const position = [
@@ -58,14 +62,13 @@ const position = [
 ];
 
 const getStaffAvatar = (staff) => {
-  const API_BASE_URL = 'http://localhost:5000';
+  // const API_BASE_URL = 'http://localhost:5000';
   let avatarSrc = `https://ui-avatars.com/api/?name=${encodeURIComponent(
     (staff?.firstName || '') + ' ' + (staff?.lastName || 'Staff')
   )}&background=random&color=fff&size=40&rounded=true`;
 
   if (staff?.photo) {
-    const photoFileName = staff.photo.includes('/') ? staff.photo.split('/').pop() : staff.photo;
-    avatarSrc = `${API_BASE_URL}/uploads/staff/${photoFileName}`;
+    avatarSrc = staff.photo;
   }
 
   return avatarSrc;
@@ -97,6 +100,7 @@ const Staff = () => {
   const [staffToDelete, setStaffToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     dispatch(getAllStaff());
@@ -142,7 +146,7 @@ const Staff = () => {
               />
               <div className="flex flex-col">
                 <span className="text-base font-semibold text-foreground">
-                  {staff.firstName || 'N/A'} {staff.lastName || ''}
+                  {staff.firstName || ''} {staff.lastName || ''} {staff.middleName || ''}
                 </span>
                 <span className="text-sm text-muted-foreground">{staff.staffId || 'N/A'}</span>
               </div>
@@ -191,6 +195,14 @@ const Staff = () => {
               onClick={() => handleDeleteClick(row.original)}
             >
               <Trash2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/staff/${row.original?._id}/documents`)}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              View Documents
             </Button>
           </div>
         ),

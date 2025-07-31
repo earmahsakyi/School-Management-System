@@ -22,7 +22,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateStaff } from '@/actions/staffAction';
-import { Camera, RotateCcw, Check, X, Loader2, Upload } from 'lucide-react'; // Added Loader2 here
+import { Camera, RotateCcw, Check, X, Loader2, Upload, FileText, Trash2 } from 'lucide-react';
 
 export function EditStaffModal({ 
   open, 
@@ -75,14 +75,15 @@ export function EditStaffModal({
   const [existingPhotoUrl, setExistingPhotoUrl] = useState(null);
   const [uploadedPhotoFile, setUploadedPhotoFile] = useState(null);
   const [uploadedPhotoPreview, setUploadedPhotoPreview] = useState(null);
+  
+  // Document states
+  const [certificateFiles, setCertificateFiles] = useState([]);
+  const [existingCertificates, setExistingCertificates] = useState([]);
 
   // Utility function to get staff avatar
   const getStaffAvatar = (staff) => {
-    const API_BASE_URL = 'http://localhost:5000';
-    
     if (staff?.photo) {
-      const photoFileName = staff.photo.includes('/') ? staff.photo.split('/').pop() : staff.photo;
-      return `${API_BASE_URL}/uploads/staff/${photoFileName}`;
+      return staff.photo;
     }
     
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(
@@ -113,9 +114,9 @@ export function EditStaffModal({
       setValue('nationality', staffData.nationality || '');
       setValue('currentAddress', staffData.currentAddress || '');
       setValue('nationalID', staffData.nationalID || '');
-      setValue('name', staffData.institutionAttended.name || '');
-      setValue('startYear', staffData.institutionAttended.startYear || '');
-      setValue('endYear', staffData.institutionAttended.endYear || '');
+      setValue('name', staffData.institutionAttended?.name || '');
+      setValue('startYear', staffData.institutionAttended?.startYear || '');
+      setValue('endYear', staffData.institutionAttended?.endYear || '');
       setValue('ssn', staffData.ssn || '');
       setValue('payrollNumber', staffData.payrollNumber || '');
       setValue('yearOfEmployment', staffData.yearOfEmployment || '');
@@ -123,6 +124,11 @@ export function EditStaffModal({
       // Set existing photo
       if (staffData.photo) {
         setExistingPhotoUrl(getStaffAvatar(staffData));
+      }
+      
+      // Set existing certificates
+      if (staffData.certificates && Array.isArray(staffData.certificates)) {
+        setExistingCertificates(staffData.certificates);
       }
     }
   }, [isEditing, staffData, open, setValue]);
@@ -156,6 +162,10 @@ export function EditStaffModal({
       setCapturedImage(null);
       setExistingPhotoUrl(null);
       setShowWebcam(false);
+      setCertificateFiles([]);
+      setExistingCertificates([]);
+      setUploadedPhotoFile(null);
+      setUploadedPhotoPreview(null);
     }
   }, [open, reset]);
 
@@ -175,6 +185,37 @@ export function EditStaffModal({
       console.error('Error converting base64 to file:', err);
       return null;
     }
+  };
+
+  // Handle multiple certificate file selection
+  const handleCertificateFiles = (event) => {
+    const files = Array.from(event.target.files);
+    
+    // Validate file types (PDF only for certificates)
+    const invalidFiles = files.filter(file => file.type !== 'application/pdf');
+    if (invalidFiles.length > 0) {
+      toast.error('Please select only PDF files for certificates');
+      return;
+    }
+    
+    // Validate file sizes (max 5MB each)
+    const oversizedFiles = files.filter(file => file.size > 5 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      toast.error('Each certificate file should not exceed 5MB');
+      return;
+    }
+    
+    setCertificateFiles(prev => [...prev, ...files]);
+  };
+
+  // Remove new certificate file
+  const removeCertificateFile = (index) => {
+    setCertificateFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Remove existing certificate
+  const removeExistingCertificate = (index) => {
+    setExistingCertificates(prev => prev.filter((_, i) => i !== index));
   };
 
   // Capture photo from webcam
@@ -244,12 +285,30 @@ export function EditStaffModal({
           formData.append('photo', photoFile);
         }
       } else if (uploadedPhotoFile) {
-      formData.append('photo', uploadedPhotoFile);
+        formData.append('photo', uploadedPhotoFile);
       }
 
       // If editing and existing photo was removed, indicate photo should be removed
-      if (isEditing && existingPhotoUrl === null && !capturedImage && staffData?.photo) {
+      if (isEditing && existingPhotoUrl === null && !capturedImage && !uploadedPhotoFile && staffData?.photo) {
         formData.append('removePhoto', 'true');
+      }
+
+      // Add new certificate files if selected
+      certificateFiles.forEach((file) => {
+        formData.append('certificates', file);
+      });
+
+      // Handle removed existing certificates
+      if (isEditing && staffData?.certificates) {
+        const removedCertificates = staffData.certificates.filter(
+          (cert, index) => !existingCertificates.some((existing, existingIndex) => 
+            existingIndex === staffData.certificates.findIndex(c => c === cert)
+          )
+        );
+        
+        if (removedCertificates.length > 0) {
+          formData.append('removedCertificates', JSON.stringify(removedCertificates));
+        }
       }
 
       // Dispatch the appropriate action
@@ -262,6 +321,8 @@ export function EditStaffModal({
       reset();
       setCapturedImage(null);
       setExistingPhotoUrl(null);
+      setCertificateFiles([]);
+      setExistingCertificates([]);
       onOpenChange(false);
       setUploadedPhotoFile(null);
       setUploadedPhotoPreview(null);
@@ -272,54 +333,50 @@ export function EditStaffModal({
     }
   };
   
-
   const handlePhotoUpload = (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file (JPG, PNG, etc.)');
-      return;
-    }
-    
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size should not exceed 5MB');
-      return;
-    }
-    
-    setUploadedPhotoFile(file);
-    
-    // Create preview URL
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setUploadedPhotoPreview(e.target.result);
-    };
-    reader.readAsDataURL(file);
-    
-    // Clear webcam captured image if exists
-    setCapturedImage(null);
-    // For EditStudentModal, also clear existing photo URL
-    if (typeof setExistingPhotoUrl !== 'undefined') {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file (JPG, PNG, etc.)');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size should not exceed 5MB');
+        return;
+      }
+      
+      setUploadedPhotoFile(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setUploadedPhotoPreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+      
+      // Clear webcam captured image if exists
+      setCapturedImage(null);
+      // Clear existing photo URL
       setExistingPhotoUrl(null);
     }
-  }
-};
+  };
 
-// Remove uploaded photo
-const removeUploadedPhoto = () => {
-  setUploadedPhotoFile(null);
-  setUploadedPhotoPreview(null);
-};
+  // Remove uploaded photo
+  const removeUploadedPhoto = () => {
+    setUploadedPhotoFile(null);
+    setUploadedPhotoPreview(null);
+  };
 
   // Get current photo to display
   const getCurrentPhoto = () => {
-  if (capturedImage) return capturedImage;
-  if (uploadedPhotoPreview) return uploadedPhotoPreview;
-  if (existingPhotoUrl) return existingPhotoUrl;
-  return null;
-};
-
+    if (capturedImage) return capturedImage;
+    if (uploadedPhotoPreview) return uploadedPhotoPreview;
+    if (existingPhotoUrl) return existingPhotoUrl;
+    return null;
+  };
 
   const departments = ['Arts', 'Science', 'Administration', 'Other'];
   const positions = [
@@ -344,7 +401,6 @@ const removeUploadedPhoto = () => {
     facingMode: facingMode
   };
 
- 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
@@ -363,178 +419,250 @@ const removeUploadedPhoto = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Photo Section */}
           <div className="space-y-4">
-                      <h3 className="text-sm font-semibold text-foreground border-b pb-2">
-                        Staff Photo
-                      </h3>
-                      
-                      <div className="flex flex-col items-center space-y-4">
-                        {!showWebcam && !getCurrentPhoto() && (
-                          <div className="flex flex-col items-center space-y-2">
-                            <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                              <Camera className="h-8 w-8 text-gray-400" />
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setShowWebcam(true)}
-                                className="flex items-center gap-2"
-                              >
-                                <Camera className="h-4 w-4" />
-                                Take Photo
-                              </Button>
-                              <div className="relative">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  className="flex items-center gap-2"
-                                  onClick={() => document.getElementById('photo-upload').click()}
-                                >
-                                  <Upload className="h-4 w-4" />
-                                  Upload Photo
-                                </Button>
-                                <input
-                                  id="photo-upload"
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handlePhotoUpload}
-                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-          
-                        {showWebcam && (
-                          <div className="flex flex-col items-center space-y-4">
-                            <div className="relative">
-                              <Webcam
-                                ref={webcamRef}
-                                audio={false}
-                                screenshotFormat="image/jpeg"
-                                videoConstraints={videoConstraints}
-                                className="rounded-lg border"
-                              />
-                            </div>
-                            
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                size="sm"
-                                onClick={capturePhoto}
-                                className="flex items-center gap-2"
-                              >
-                                <Camera className="h-4 w-4" />
-                                Capture
-                              </Button>
-                              
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={switchCamera}
-                                className="flex items-center gap-2"
-                              >
-                                <RotateCcw className="h-4 w-4" />
-                                Switch Camera
-                              </Button>
-                              
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={closeWebcam}
-                                className="flex items-center gap-2"
-                              >
-                                <X className="h-4 w-4" />
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-          
-                        {getCurrentPhoto() && (
-                          <div className="flex flex-col items-center space-y-4">
-                            <div className="relative">
-                              <img
-                                src={getCurrentPhoto()}
-                                alt="Student photo"
-                                className="w-32 h-32 object-cover rounded-lg border"
-                              />
-                              {(capturedImage || uploadedPhotoPreview) && (
-                                <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
-                                  <Check className="h-3 w-3" />
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setShowWebcam(true)}
-                                className="flex items-center gap-2"
-                              >
-                                <Camera className="h-4 w-4" />
-                                Take New Photo
-                              </Button>
-                              
-                              <div className="relative">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex items-center gap-2"
-                                  onClick={() => document.getElementById('photo-upload').click()}
-                                >
-                                  <Upload className="h-4 w-4" />
-                                  Upload New Photo
-                                </Button>
-                                <input
-                                  id="photo-upload"
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handlePhotoUpload}
-                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                />
-                              </div>
-                              
-                              {capturedImage && (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={retakePhoto}
-                                  className="flex items-center gap-2"
-                                >
-                                  <RotateCcw className="h-4 w-4" />
-                                  Retake
-                                </Button>
-                              )}
-                              
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setCapturedImage(null);
-                                  removeUploadedPhoto();
-                                  // For EditStudentModal only
-                                  if (typeof removeExistingPhoto !== 'undefined') {
-                                    removeExistingPhoto();
-                                  }
-                                }}
-                                className="flex items-center gap-2"
-                              >
-                                <X className="h-4 w-4" />
-                                Remove
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+            <h3 className="text-sm font-semibold text-foreground border-b pb-2">
+              Staff Photo
+            </h3>
+            
+            <div className="flex flex-col items-center space-y-4">
+              {!showWebcam && !getCurrentPhoto() && (
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                    <Camera className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowWebcam(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <Camera className="h-4 w-4" />
+                      Take Photo
+                    </Button>
+                    <div className="relative">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        onClick={() => document.getElementById('photo-upload').click()}
+                      >
+                        <Upload className="h-4 w-4" />
+                        Upload Photo
+                      </Button>
+                      <input
+                        id="photo-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {showWebcam && (
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="relative">
+                    <Webcam
+                      ref={webcamRef}
+                      audio={false}
+                      screenshotFormat="image/jpeg"
+                      videoConstraints={videoConstraints}
+                      className="rounded-lg border"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={capturePhoto}
+                      className="flex items-center gap-2"
+                    >
+                      <Camera className="h-4 w-4" />
+                      Capture
+                    </Button>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={switchCamera}
+                      className="flex items-center gap-2"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Switch Camera
+                    </Button>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={closeWebcam}
+                      className="flex items-center gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {getCurrentPhoto() && (
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="relative">
+                    <img
+                      src={getCurrentPhoto()}
+                      alt="Staff photo"
+                      className="w-32 h-32 object-cover rounded-lg border"
+                    />
+                    {(capturedImage || uploadedPhotoPreview) && (
+                      <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
+                        <Check className="h-3 w-3" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowWebcam(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <Camera className="h-4 w-4" />
+                      Take New Photo
+                    </Button>
+                    
+                    <div className="relative">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2"
+                        onClick={() => document.getElementById('photo-upload').click()}
+                      >
+                        <Upload className="h-4 w-4" />
+                        Upload New Photo
+                      </Button>
+                      <input
+                        id="photo-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                    </div>
+                    
+                    {capturedImage && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={retakePhoto}
+                        className="flex items-center gap-2"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Retake
+                      </Button>
+                    )}
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setCapturedImage(null);
+                        removeUploadedPhoto();
+                        removeExistingPhoto();
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Document Upload Section */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-foreground border-b pb-2">
+              Certificates (Optional)
+            </h3>
+            
+            <div className="space-y-2">
+              <Label htmlFor="certificates">Upload New Certificates (PDF)</Label>
+              <Input
+                id="certificates"
+                type="file"
+                accept=".pdf"
+                multiple
+                onChange={handleCertificateFiles}
+                className="file:mr-2 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              
+              {/* Display existing certificate files */}
+              {existingCertificates.length > 0 && (
+                <div className="space-y-2 mt-4">
+                  <h4 className="text-sm font-medium text-gray-700">Existing Certificates:</h4>
+                  {existingCertificates.map((cert, index) => (
+                    <div key={`existing-${index}`} className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <FileText className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm text-blue-800 truncate">
+                          {cert?.split(/[\\/]/).pop() || `Certificate ${index + 1}`}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeExistingCertificate(index)}
+                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Display newly selected certificate files */}
+              {certificateFiles.length > 0 && (
+                <div className="space-y-2 mt-2">
+                  <h4 className="text-sm font-medium text-gray-700">New Certificates to Upload:</h4>
+                  {certificateFiles.map((file, index) => (
+                    <div key={`new-${index}`} className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <FileText className="h-4 w-4 text-green-600" />
+                        <span className="text-sm text-green-800 truncate">
+                          {file.name}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeCertificateFile(index)}
+                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <p className="text-xs text-gray-500">
+              * PDF files only, maximum 5MB each
+            </p>
+          </div>
 
           {/* Personal Information */}
           <div className="space-y-4">
@@ -601,20 +729,20 @@ const removeUploadedPhoto = () => {
                 )}
               </div>
             </div>
+            
             <div className="space-y-2">
-                <Label htmlFor="nationalID">National ID</Label>
-                <Input
-                  id="nationalID"
-                  {...register('nationalID', {required: 'National ID is required'})}
-                  placeholder="Enter national ID number"
-                />
-                {errors.nationalID && (
-                  <p className="text-sm text-destructive">{errors.nationalID.message}</p>
-                )}
-              </div>
-          </div>
-          
-          <div className="space-y-2">
+              <Label htmlFor="nationalID">National ID</Label>
+              <Input
+                id="nationalID"
+                {...register('nationalID', {required: 'National ID is required'})}
+                placeholder="Enter national ID number"
+              />
+              {errors.nationalID && (
+                <p className="text-sm text-destructive">{errors.nationalID.message}</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
               <Label htmlFor="nationality">Nationality</Label>
               <Input
                 id="nationality"
@@ -622,8 +750,8 @@ const removeUploadedPhoto = () => {
                 placeholder="Enter nationality here"
               />
               {errors.nationality && (
-                  <p className="text-sm text-destructive">{errors.nationality.message}</p>
-                )}
+                <p className="text-sm text-destructive">{errors.nationality.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -634,30 +762,31 @@ const removeUploadedPhoto = () => {
                 placeholder="Enter current residential address"
               />
               {errors.currentAddress && (
-                  <p className="text-sm text-destructive">{errors.currentAddress.message}</p>
-                )}
+                <p className="text-sm text-destructive">{errors.currentAddress.message}</p>
+              )}
             </div>
-             <div className="space-y-2">
-                <Label htmlFor="maritalStatus">Marital Status *</Label>
-                <Select
-                  value={watchedMaritalStatus} 
-                  onValueChange={(value) => setValue('maritalStatus', value, { shouldValidate: true })}
-                  {...register('maritalStatus', { required: 'Marital Status is required' })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Marital Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Married">Married</SelectItem>
-                    <SelectItem value="Single">Single</SelectItem>
-                    <SelectItem value="Divorced">Divorced</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.maritalStatus && (
-                  <p className="text-sm text-destructive">{errors.maritalStatus.message}</p>
-                )}
-              </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="maritalStatus">Marital Status *</Label>
+              <Select
+                value={watchedMaritalStatus} 
+                onValueChange={(value) => setValue('maritalStatus', value, { shouldValidate: true })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Marital Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Married">Married</SelectItem>
+                  <SelectItem value="Single">Single</SelectItem>
+                  <SelectItem value="Divorced">Divorced</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.maritalStatus && (
+                <p className="text-sm text-destructive">{errors.maritalStatus.message}</p>
+              )}
+            </div>
+          </div>
 
           {/* Professional Information */}
           <div className="space-y-4">
@@ -706,7 +835,7 @@ const removeUploadedPhoto = () => {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+              </div>
 
             <div className="space-y-2">
               <Label htmlFor="qualifications">Qualifications</Label>

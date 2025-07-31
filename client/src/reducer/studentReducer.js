@@ -33,7 +33,11 @@ PROCESS_BATCH_PROMOTIONS_FAIL,
 GET_ELIGIBLE_STUDENTS_REQUEST ,
  GET_ELIGIBLE_STUDENTS_SUCCESS ,
  GET_ELIGIBLE_STUDENTS_FAIL ,
-CLEAR_PROMOTION_DATA
+CLEAR_PROMOTION_DATA,
+ GET_STUDENT_DOCUMENTS_REQUEST,
+  GET_STUDENT_DOCUMENTS_SUCCESS,
+  GET_STUDENT_DOCUMENTS_FAIL,
+  CLEAR_STUDENT_DOCUMENTS
 } from '../actions/types';
 
 const initialState = {
@@ -52,6 +56,9 @@ const initialState = {
   batchPromotionResult: null,
   promotionLoading: false,
   promotionError: null,
+  documents: null,
+  documentsLoading: false,
+  documentsError: null,
 };
 
 const studentReducer = (state = initialState, action) => {
@@ -357,6 +364,37 @@ const studentReducer = (state = initialState, action) => {
         promotionError: payload,
         eligibleStudents: null
       };
+
+            case GET_STUDENT_DOCUMENTS_REQUEST:
+       return {
+    ...state,
+    documentsLoading: true,
+    documentsError: null
+  };
+
+case GET_STUDENT_DOCUMENTS_SUCCESS:
+  return {
+    ...state,
+    documentsLoading: false,
+    documents: action.payload,
+    documentsError: null
+  };
+
+case GET_STUDENT_DOCUMENTS_FAIL:
+  return {
+    ...state,
+    documentsLoading: false,
+    documentsError: action.payload,
+    documents: null
+  };
+
+case CLEAR_STUDENT_DOCUMENTS:
+  return {
+    ...state,
+    documents: null,
+    documentsError: null,
+    documentsLoading: false
+  };
 
     // Clear promotion data
     case CLEAR_PROMOTION_DATA:

@@ -19,7 +19,7 @@ import { getCurrentAdminProfile } from '@/actions/adminAction';
 export function TopNavbar({ onMenuClick }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const API_BASE_URL = 'http://localhost:5000';
+  // const API_BASE_URL = 'http://localhost:5000';
   const { profile, loading } = useSelector(state => state.admin);
   const { user } = useSelector(state => state.auth);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -56,10 +56,11 @@ if (loading && !profile) {
     );
   }
 
-   let avatarSrc = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.fullName || "Admin")}`;
-  if (profile?.photo) {
-    avatarSrc = `${API_BASE_URL}/uploads/admins/${profile.photo.split(/[\\/]/).pop()}`;
-  }
+  let avatarSrc = `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.fullName || "Admin")}`;
+
+if (profile?.photo) {
+  avatarSrc = profile.photo; // Direct S3 URL stored in DB
+}
 
 
   return (
@@ -83,7 +84,7 @@ if (loading && !profile) {
 
       {/* Right side */}
       <div className="flex items-center gap-x-4 lg:gap-x-6">
-        {/* Notifications */}
+        {/* Notifications
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">
@@ -115,7 +116,7 @@ if (loading && !profile) {
               <span className="text-sm text-primary cursor-pointer">View all notifications</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu>
+        </DropdownMenu> */}
 
         {/* Profile dropdown */}
         <DropdownMenu>
@@ -147,10 +148,10 @@ if (loading && !profile) {
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            {/* <DropdownMenuItem>
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive" onClick={onLogout}>
               <LogOut className="mr-2 h-4 w-4" />

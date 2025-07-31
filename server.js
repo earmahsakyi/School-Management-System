@@ -11,10 +11,7 @@ app.use(express.json({ extended: false}));
 
 app.get('/', (req, res) => res.json({ msg: 'Welcome to the School Management API'}));
 
-// Serve static files from the "uploads" directory
-app.use('/uploads/admins', express.static(path.join(__dirname, 'uploads', 'admins')));
-app.use('/uploads/students', express.static(path.join(__dirname, 'uploads', 'students')));
-app.use('/uploads/staff', express.static(path.join(__dirname, 'uploads', 'staff')));
+
   
 // Define Routes
 app.use('/api/auth',require('./routes/auth'));      
@@ -32,6 +29,7 @@ app.use('/api/payments', require('./routes/payment'));
 app.use('/api/other-payments', require('./routes/otherPayment'));  
 app.use('/api/financial', require('./routes/financialReport'));  
 app.use('/api/tvet', require('./routes/tvet'));  
+app.use('/api/tvet-financial', require('./routes/tvetFinancialReport'));  
 
        
 const PORT = 5000;

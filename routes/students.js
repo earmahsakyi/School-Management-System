@@ -1,12 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer'); // Import multer directly
-const { imageFileFilter, pdfFileFilter } = require('../middleware/studentStaffUploads');
-const createError = require('http-errors'); 
+const { upload, uploadToS3 } = require('../middleware/s3Uploader'); 
 const auth = require('../middleware/auth');
 const Student = require('../models/Student');
-const fs = require('fs');
-const path = require('path');
+const { DeleteObjectCommand,S3Client } = require('@aws-sdk/client-s3');
+const config = require('../config/default.json');
+
+const s3 = new S3Client({
+  region: config.AWS_REGION,
+  credentials: {
+    accessKeyId: config.AWS_ACCESS_KEY,
+    secretAccessKey: config.AWS_SECRET_KEY,
+  },
+});
+
 
 const {
   createStudentAndParent,
@@ -21,88 +28,77 @@ const {
   processStudentPromotion,
   getStudentYearlyAveragesController,
   processBatchStudentPromotions,
-  getEligibleStudentsForPromotion
+  getEligibleStudentsForPromotion,
+  getStudentDocuments,
+  downloadStudentDocument
 } = require('../controllers/studentController');
 
-// Custom Multer setup for handling multiple file fields for update/create
-const uploadMultipleFiles = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      let folder;
-      if (file.fieldname === 'photo') {
-        folder = 'students';
-      } else if (file.fieldname === 'transcript') {
-        folder = 'transcripts';
-      } else if (file.fieldname === 'reportCard') {
-        folder = 'reportcards';
-      } else {
-        return cb(createError(400, 'Invalid field name for file upload'), false);
-      }
-      
-      const uploadDir = path.join(__dirname, `../uploads/${folder}/`);
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      if (!req.user?.id) {
-        return cb(createError(401, 'User not authenticated'), false);
-      }
-      const ext = path.extname(file.originalname).toLowerCase();
-      const filename = `${req.user.id}-${Date.now()}${ext}`;
-      cb(null, filename);
-    }
-  }),
-  fileFilter: (req, file, cb) => {
-    if (file.fieldname === 'photo') {
-      imageFileFilter(req, file, cb);
-    } else if (file.fieldname === 'transcript' || file.fieldname === 'reportCard') {
-      pdfFileFilter(req, file, cb);
-    } else {
-      cb(createError(400, 'Invalid file type or field for upload'), false);
-    }
-  },
-  limits: {
-    fileSize: 2 * 1024 * 1024 // 2 MB per file
-  }
-}).fields([
-  { name: 'photo', maxCount: 1 },
-  { name: 'transcript', maxCount: 1 },
-  { name: 'reportCard', maxCount: 1 },
-]);
+
 
 // Main student routes with consolidated file upload
-router.post('/', auth, uploadMultipleFiles, createStudentAndParent); 
-router.put('/:id', auth, uploadMultipleFiles, updateStudentAndParent); 
+router.post('/', auth, upload,
+    async (req, res, next) => {
+    try {
+      const files = req.files;
+      const uploadedUrls = {};
+       const role = 'student';
+
+      for (const field in files) {
+        const file = files[field][0];
+        const url = await uploadToS3(file, role); // Upload to S3
+        uploadedUrls[field] = url;
+      }
+
+      req.body.uploadedUrls = uploadedUrls; // inject into req.body for controller
+      next();
+    } catch (err) {
+      console.error(err.message || "server error");
+    }
+  },
+  
+  createStudentAndParent); 
+router.put('/:id', auth, upload,
+  async (req, res, next) => {
+    try {
+      const files = req.files;
+      const uploadedUrls = {};
+       const role = 'student';
+
+      for (const field in files) {
+        const file = files[field][0];
+        const url = await uploadToS3(file, role); // Upload to S3
+        uploadedUrls[field] = url;
+      }
+
+      req.body.uploadedUrls = uploadedUrls; // inject into req.body for controller
+      next();
+    } catch (err) {
+      console.error(err.message || "server error");
+    }
+  }, updateStudentAndParent); 
 
 // Remove individual files
 router.delete('/remove-transcript/:id', auth, async (req, res) => {
-  try {
+try {
     const student = await Student.findById(req.params.id);
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
 
-    if (student.transcript && fs.existsSync(student.transcript)) {
-      fs.unlinkSync(student.transcript);
+    if (student.transcript) {
+      const key = getKeyFromUrl(student.transcript);
+      if (key) {
+        await s3.send(new DeleteObjectCommand({ Bucket: config.AWS_BUCKET_NAME, Key: key }));
+      }
+      student.transcript = '';
+      await student.save();
     }
 
-    student.transcript = '';
-    await student.save();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Transcript removed successfully'
-    });
+    res.status(200).json({ success: true, message: 'Transcript removed from S3 and DB' });
 
   } catch (error) {
-    console.error('Remove transcript error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Server error during transcript removal',
-      error: error.message
-    });
+    console.error('Transcript deletion failed:', error);
+    res.status(500).json({ success: false, message: 'Error removing transcript', error: error.message });
   }
 });
 
@@ -113,27 +109,22 @@ router.delete('/remove-reportcard/:id', auth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
 
-    if (student.reportCard && fs.existsSync(student.reportCard)) {
-      fs.unlinkSync(student.reportCard);
+    if (student.reportCard) {
+      const key = getKeyFromUrl(student.reportCard);
+      if (key) {
+        await s3.send(new DeleteObjectCommand({ Bucket: config.AWS_BUCKET_NAME, Key: key }));
+      }
+      student.reportCard = '';
+      await student.save();
     }
 
-    student.reportCard = '';
-    await student.save();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Report card removed successfully'
-    });
+    res.status(200).json({ success: true, message: 'Report card removed from S3 and DB' });
 
   } catch (error) {
-    console.error('Remove report card error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Server error during report card removal',
-      error: error.message
-    });
+    console.error('Report card deletion failed:', error);
+    res.status(500).json({ success: false, message: 'Error removing report card', error: error.message });
   }
-});
+});  
 
 // Promotion-related routes
 router.get('/promotion/eligible', auth, getEligibleStudentsForPromotion);
@@ -144,6 +135,8 @@ router.get('/:id/yearly-averages', auth, getStudentYearlyAveragesController);
 router.put('/:id/promotion', auth, updatePromotionStatus);
 
 // Main CRUD routes
+router.get('/student-documents/:id',auth,getStudentDocuments)
+router.get('/download-document', auth, downloadStudentDocument);
 router.get('/search', auth, searchStudents);
 router.get('/', auth, getAllStudents);
 router.get('/stats', auth, getSchoolStats);

@@ -10,7 +10,7 @@ import {
   Loader2, 
   DollarSign, 
   Receipt, 
-  Download,
+  Printer, // Updated icon for printing
   CreditCard,
   TrendingUp
 } from 'lucide-react';
@@ -144,7 +144,7 @@ const ViewPaymentModal = ({ open, onOpenChange, payment }) => {
   );
 };
 
-// Edit Payment Modal
+//edit Payment
 const EditPaymentModal = ({ open, onOpenChange, payment, onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -381,49 +381,48 @@ export default function PaymentsPage() {
   };
 
   // Fetch payments
-const fetchPayments = async (page = 1) => {
-  setLoading(true);
-  try {
-    const queryParams = new URLSearchParams({
-      page: page.toString(),
-      limit: '10',
-      ...Object.fromEntries(
-        Object.entries(filters).filter(([key, value]) => {
-          // Only include academicYear if it's not "all"
-          if (key === 'academicYear' && value === 'all') return false;
-          return value && value.trim() !== '';
-        })
-      ),
-    });
-
-    const response = await fetch(`/api/payments?${queryParams}`);
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch payments');
-    }
-
-    const data = await response.json();
-
-    if (data.success) {
-      setPayments(data.payments || []);
-      setPagination(data.pagination || {
-        current: 1,
-        pages: 1,
-        total: 0,
-        hasNext: false,
-        hasPrev: false,
+  const fetchPayments = async (page = 1) => {
+    setLoading(true);
+    try {
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: '10',
+        ...Object.fromEntries(
+          Object.entries(filters).filter(([key, value]) => {
+            if (key === 'academicYear' && value === 'all') return false;
+            return value && value.trim() !== '';
+          })
+        ),
       });
-    } else {
-      throw new Error(data.message || 'Failed to fetch payments');
+
+      const response = await fetch(`/api/payments?${queryParams}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch payments');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setPayments(data.payments || []);
+        setPagination(data.pagination || {
+          current: 1,
+          pages: 1,
+          total: 0,
+          hasNext: false,
+          hasPrev: false,
+        });
+      } else {
+        throw new Error(data.message || 'Failed to fetch payments');
+      }
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      toast.error(error.message || 'Failed to load payments');
+      setPayments([]);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error fetching payments:', error);
-    toast.error(error.message || 'Failed to load payments');
-    setPayments([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Fetch payment statistics
   const fetchStats = async () => {
@@ -515,7 +514,6 @@ const fetchPayments = async (page = 1) => {
       setDeleteDialogOpen(false);
       setPaymentToDelete(null);
 
-      // Recalculate target page after deletion
       const currentPage = pagination.current;
       const totalAfterDelete = pagination.total - 1;
       const itemsPerPage = 10;
@@ -523,7 +521,7 @@ const fetchPayments = async (page = 1) => {
       const targetPage = currentPage > maxPage ? maxPage : currentPage;
 
       fetchPayments(targetPage);
-      fetchStats(); // Refresh stats
+      fetchStats();
 
     } catch (error) {
       console.error('Delete error:', error);
@@ -533,44 +531,166 @@ const fetchPayments = async (page = 1) => {
     }
   };
 
-  // Download receipt (regenerate)
-  const downloadReceipt = async (payment) => {
+  // Handle batch receipt printing - FIXED VERSION
+  const handleGenerateBatchReceipts = async () => {
     try {
-      const response = await fetch('/api/payments/generate-receipt', {
-        method: 'POST',
+      setLoading(true);
+
+      const queryParams = new URLSearchParams({
+        ...Object.fromEntries(
+          Object.entries(filters).filter(([key, value]) => {
+            if (key === 'academicYear' && value === 'all') return false;
+            return value && value.trim() !== '';
+          })
+        ),
+      });
+
+      const response = await fetch(`/api/payments/batch-receipts?${queryParams}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          studentId: payment.student._id,
-          amount: payment.amount,
-          bankDepositNumber: payment.bankDepositNumber,
-          academicYear: payment.academicYear,
-          description: payment.description
-        })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate receipt');
-        
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate batch receipts');
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `receipt-${payment.receiptNumber}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
 
-      toast.success("Receipt downloaded successfully!");
+      // Method 1: Try direct window.open approach first
+      try {
+        const printWindow = window.open(url, '_blank');
+        if (printWindow) {
+          printWindow.addEventListener('load', () => {
+            setTimeout(() => {
+              printWindow.print();
+              toast.success("Print dialog opened for batch receipts!");
+            }, 500);
+          });
+          
+          // Cleanup after some time
+          setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+          }, 10000);
+          
+          return; // Exit early if this method works
+        }
+      } catch (error) {
+        console.log('Window.open method failed, trying iframe method:', error);
+      }
+
+      // Method 2: Fallback to iframe approach with better timing
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.border = 'none';
+      iframe.src = url;
+      
+      document.body.appendChild(iframe);
+
+      // Better event handling for iframe
+      const handleIframeLoad = () => {
+        setTimeout(() => {
+          try {
+            if (iframe.contentWindow) {
+              iframe.contentWindow.focus();
+              iframe.contentWindow.print();
+              toast.success("Print dialog opened for batch receipts!");
+            }
+          } catch (error) {
+            console.error('Print error:', error);
+            // Fallback: download the file instead
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `batch-receipts-${new Date().getTime()}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("PDF downloaded successfully!");
+          }
+        }, 1000); // Increased delay to ensure PDF is fully loaded
+      };
+
+      // Add load event listener
+      iframe.addEventListener('load', handleIframeLoad);
+      
+      // Cleanup function
+      const cleanup = () => {
+        try {
+          if (iframe && iframe.parentNode) {
+            iframe.removeEventListener('load', handleIframeLoad);
+            document.body.removeChild(iframe);
+          }
+          window.URL.revokeObjectURL(url);
+        } catch (error) {
+          console.error('Cleanup error:', error);
+        }
+      };
+
+      // Cleanup after longer delay to ensure print dialog has time to open
+      setTimeout(cleanup, 15000);
 
     } catch (error) {
-      console.error('Receipt download error:', error);
-      toast.error("Failed to download receipt");
+      console.error('Batch receipt generation error:', error);
+      toast.error(error.message || "Failed to generate batch receipts");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Alternative method for batch receipts (download approach)
+  const handleDownloadBatchReceipts = async () => {
+    try {
+      setLoading(true);
+
+      const queryParams = new URLSearchParams({
+        ...Object.fromEntries(
+          Object.entries(filters).filter(([key, value]) => {
+            if (key === 'academicYear' && value === 'all') return false;
+            return value && value.trim() !== '';
+          })
+        ),
+      });
+
+      const response = await fetch(`/api/payments/batch-receipts?${queryParams}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate batch receipts');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `batch-receipts-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Batch receipts downloaded successfully!");
+
+    } catch (error) {
+      console.error('Batch receipt download error:', error);
+      toast.error(error.message || "Failed to download batch receipts");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -592,7 +712,7 @@ const fetchPayments = async (page = 1) => {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Payment Management</h1>
-            <p className="text-muted-foreground">Manage student payments and generate receipts</p>
+            <p className="text-muted-foreground">Manage student payments and print receipts</p>
           </div>
           <Button onClick={() => setIsAddModalOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
@@ -749,6 +869,35 @@ const fetchPayments = async (page = 1) => {
               <Button onClick={handleSearch} disabled={loading}>
                 Apply Filters
               </Button>
+              <div className="flex gap-2">
+                <Button onClick={handleGenerateBatchReceipts} disabled={loading || payments.length === 0}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Printer className="h-4 w-4 mr-2" />
+                      Print Receipts
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleDownloadBatchReceipts} 
+                  disabled={loading || payments.length === 0}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Downloading...
+                    </>
+                  ) : (
+                    'Download Receipts'
+                  )}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -828,21 +977,6 @@ const fetchPayments = async (page = 1) => {
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>View Details</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    onClick={() => downloadReceipt(payment)} 
-                                    disabled={loading}
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Download Receipt</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                             <TooltipProvider>

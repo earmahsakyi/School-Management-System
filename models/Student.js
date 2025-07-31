@@ -56,7 +56,7 @@ const studentSchema = new mongoose.Schema({
   },
   admissionNumber: {
     type: String,
-    unique: true,
+    unique: true,  
     required: [true, "Admission number is required"],
     trim: true
   },

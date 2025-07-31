@@ -11,6 +11,7 @@ import {
   DollarSign, 
   Receipt, 
   Download,
+  Printer,
   CreditCard,
   TrendingUp
 } from 'lucide-react';
@@ -74,7 +75,7 @@ const ViewPaymentModal = ({ open, onOpenChange, payment }) => {
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Student Name</p>
-                  <p className="font-semibold">{payment.student?.firstName} {payment.student?.lastName} {payment.student?.lastName || ''} </p>
+                  <p className="font-semibold">{payment.student?.firstName} {payment.student?.lastName} {payment.student?.middleName || ''}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Admission Number</p>
@@ -85,7 +86,7 @@ const ViewPaymentModal = ({ open, onOpenChange, payment }) => {
                   <p className="font-semibold">Grade {payment.student?.gradeLevel}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground"> Section </p>
+                  <p className="text-sm font-medium text-muted-foreground">Section</p>
                   <p className="font-semibold">Section {payment.student?.classSection}</p>
                 </div>
                 <div>
@@ -297,7 +298,7 @@ const EditPaymentModal = ({ open, onOpenChange, payment, onSuccess }) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="paymentOf">Payment Of:</Label>
+            <Label htmlFor="paymentOf">Payment Of *</Label>
             <Input
               id="paymentOf"
               value={formData.paymentOf}
@@ -306,7 +307,6 @@ const EditPaymentModal = ({ open, onOpenChange, payment, onSuccess }) => {
               placeholder="Enter payment type"
             />
           </div>
-          
 
           <div className="space-y-2">
             <Label htmlFor="edit-description">Payment Description</Label>
@@ -400,49 +400,48 @@ export default function PaymentsPage() {
   };
 
   // Fetch payments
-const fetchPayments = async (page = 1) => {
-  setLoading(true);
-  try {
-    const queryParams = new URLSearchParams({
-      page: page.toString(),
-      limit: '10',
-      ...Object.fromEntries(
-        Object.entries(filters).filter(([key, value]) => {
-          // Only include academicYear if it's not "all"
-          if (key === 'academicYear' && value === 'all') return false;
-          return value && value.trim() !== '';
-        })
-      ),
-    });
-
-    const response = await fetch(`/api/other-payments?${queryParams}`);
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch payments');
-    }
-
-    const data = await response.json();
-
-    if (data.success) {
-      setPayments(data.payments || []);
-      setPagination(data.pagination || {
-        current: 1,
-        pages: 1,
-        total: 0,
-        hasNext: false,
-        hasPrev: false,
+  const fetchPayments = async (page = 1) => {
+    setLoading(true);
+    try {
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: '10',
+        ...Object.fromEntries(
+          Object.entries(filters).filter(([key, value]) => {
+            if (key === 'academicYear' && value === 'all') return false;
+            return value && value.trim() !== '';
+          })
+        ),
       });
-    } else {
-      throw new Error(data.message || 'Failed to fetch payments');
+
+      const response = await fetch(`/api/other-payments?${queryParams}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch payments');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setPayments(data.payments || []);
+        setPagination(data.pagination || {
+          current: 1,
+          pages: 1,
+          total: 0,
+          hasNext: false,
+          hasPrev: false,
+        });
+      } else {
+        throw new Error(data.message || 'Failed to fetch payments');
+      }
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      toast.error(error.message || 'Failed to load payments');
+      setPayments([]);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error fetching payments:', error);
-    toast.error(error.message || 'Failed to load payments');
-    setPayments([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Fetch payment statistics
   const fetchStats = async () => {
@@ -534,7 +533,6 @@ const fetchPayments = async (page = 1) => {
       setDeleteDialogOpen(false);
       setPaymentToDelete(null);
 
-      // Recalculate target page after deletion
       const currentPage = pagination.current;
       const totalAfterDelete = pagination.total - 1;
       const itemsPerPage = 10;
@@ -542,7 +540,7 @@ const fetchPayments = async (page = 1) => {
       const targetPage = currentPage > maxPage ? maxPage : currentPage;
 
       fetchPayments(targetPage);
-      fetchStats(); // Refresh stats
+      fetchStats();
 
     } catch (error) {
       console.error('Delete error:', error);
@@ -552,7 +550,7 @@ const fetchPayments = async (page = 1) => {
     }
   };
 
-  // Download receipt (regenerate)
+  // Download individual receipt
   const downloadReceipt = async (payment) => {
     try {
       const response = await fetch('/api/other-payments/generate-receipt', {
@@ -573,7 +571,6 @@ const fetchPayments = async (page = 1) => {
 
       if (!response.ok) {
         throw new Error('Failed to generate receipt');
-        
       }
 
       const blob = await response.blob();
@@ -592,6 +589,109 @@ const fetchPayments = async (page = 1) => {
     } catch (error) {
       console.error('Receipt download error:', error);
       toast.error("Failed to download receipt");
+    }
+  };
+
+  // Handle batch receipt printing
+  const handleGenerateBatchReceipts = async () => {
+    try {
+      setLoading(true);
+
+      const queryParams = new URLSearchParams({
+        ...Object.fromEntries(
+          Object.entries(filters).filter(([key, value]) => {
+            if (key === 'academicYear' && value === 'all') return false;
+            return value && value.trim() !== '';
+          })
+        ),
+      });
+
+      const response = await fetch(`/api/other-payments/batch-receipts?${queryParams}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate batch receipts');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      try {
+        const printWindow = window.open(url, '_blank');
+        if (printWindow) {
+          printWindow.addEventListener('load', () => {
+            setTimeout(() => {
+              printWindow.print();
+              toast.success("Print dialog opened for batch receipts!");
+            }, 500);
+          });
+          setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+          }, 10000);
+          return;
+        }
+      } catch (error) {
+        console.log('Window.open method failed, trying iframe method:', error);
+      }
+
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.border = 'none';
+      iframe.src = url;
+      
+      document.body.appendChild(iframe);
+
+      const handleIframeLoad = () => {
+        setTimeout(() => {
+          try {
+            if (iframe.contentWindow) {
+              iframe.contentWindow.focus();
+              iframe.contentWindow.print();
+              toast.success("Print dialog opened for batch receipts!");
+            }
+          } catch (error) {
+            console.error('Print error:', error);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `batch-receipts-${new Date().getTime()}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("PDF downloaded successfully!");
+          }
+        }, 1000);
+      };
+
+      iframe.addEventListener('load', handleIframeLoad);
+
+      const cleanup = () => {
+        try {
+          if (iframe && iframe.parentNode) {
+            iframe.removeEventListener('load', handleIframeLoad);
+            document.body.removeChild(iframe);
+          }
+          window.URL.revokeObjectURL(url);
+        } catch (error) {
+          console.error('Cleanup error:', error);
+        }
+      };
+
+      setTimeout(cleanup, 15000);
+
+    } catch (error) {
+      console.error('Batch receipt generation error:', error);
+      toast.error(error.message || "Failed to generate batch receipts");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -770,6 +870,22 @@ const fetchPayments = async (page = 1) => {
               <Button onClick={handleSearch} disabled={loading}>
                 Apply Filters
               </Button>
+              <Button 
+                onClick={handleGenerateBatchReceipts} 
+                disabled={loading || payments.length === 0}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print Batch Receipts
+                  </>
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -822,7 +938,7 @@ const fetchPayments = async (page = 1) => {
                             {payment.receiptNumber}
                           </TableCell>
                           <TableCell>
-||                            {payment.student?.firstName} {payment.student?.lastName} {payment.student?.middleName || ''}
+                            {payment.student?.firstName} {payment.student?.lastName} {payment.student?.middleName || ''}
                           </TableCell>
                           <TableCell>{payment.student?.admissionNumber}</TableCell>
                           <TableCell>

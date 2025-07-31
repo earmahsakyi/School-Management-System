@@ -1,8 +1,16 @@
 const Staff = require('../models/Staff');
-const fs = require('fs');
-const path = require('path');
 const generateStaffID = require('../utils/generateStaffID');
 const StaffAudit = require('../models/StaffAudit');
+const config = require('../config/default.json');
+const { DeleteObjectCommand ,S3Client,GetObjectCommand } = require('@aws-sdk/client-s3');
+
+const s3 = new S3Client({
+  region: config.AWS_REGION,
+  credentials: {
+    accessKeyId: config.AWS_ACCESS_KEY_ID,
+    secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
+  },
+});
 
 // @desc    Create new staff
 // @route   POST /api/staff
@@ -16,29 +24,17 @@ exports.createStaff = async (req, res) => {
       startYear, endYear, name,maritalStatus,nationality,ssn,payrollNumber,yearOfEmployment
     } = req.body;
 
-    const cleanupFiles = (files) => {
-      if (files) {
-        Object.values(files).forEach(fileArray => {
-          fileArray.forEach(file => {
-            if (fs.existsSync(file.path)) {
-              fs.unlinkSync(file.path);
-              console.log('Deleted uploaded file:', file.path);
-            }
-          });
-        });
-      }
-    };
+    
 
     const requiredFields = { firstName, lastName, dob, gender, position, department, phone, email,name, placeOfBirth,nationality,maritalStatus,ssn,payrollNumber,yearOfEmployment };
     const missingFields = Object.entries(requiredFields).filter(([_, v]) => !v).map(([k]) => k);
     if (missingFields.length > 0) {
-      cleanupFiles(req.files);
+      
       return res.status(400).json({ success: false, msg: 'Missing required fields', missingFields });
     }
 
     const existingStaff = await Staff.findOne({ email });
     if (existingStaff) {
-      cleanupFiles(req.files);
       return res.status(409).json({ success: false, msg: 'Staff with this email already exists' });
     }
 
@@ -75,18 +71,23 @@ exports.createStaff = async (req, res) => {
         };
 
         // Handle photo upload
-        if (req.files?.photo?.length > 0) {
-          const photoFile = req.files.photo[0];
-          staffData.photo = `uploads/staff/${path.basename(photoFile.path)}`;
-        }
+        if (req.body.uploadedUrls?.photo) {
+          const s3PhotoUrl = req.body.uploadedUrls.photo;
+          staffData.photo = s3PhotoUrl;
+          }
 
         //  Handle multiple certificate file uploads
-        if (req.files?.certificates?.length > 0) {
-          staffData.certificates = req.files.certificates.map(file =>
-            `uploads/certificate/${path.basename(file.path)}`
-          );
+        if (req.body.uploadedUrls?.certificates) {
+          const s3CertificatesUrls = req.body.uploadedUrls.certificates;
+            console.log('📦 Certificates received in controller:', s3CertificatesUrls);
+          // If it's an array, save as is
+          if (Array.isArray(s3CertificatesUrls)) {
+            staffData.certificates = s3CertificatesUrls;
+          } else {
+            // If it's a single URL, wrap it in an array
+            staffData.certificates = [s3CertificatesUrls];
+          }
         }
-
         staff = await Staff.create(staffData);
         break; // Success
       } catch (err) {
@@ -104,12 +105,7 @@ exports.createStaff = async (req, res) => {
       throw new Error('Failed to generate unique Staff ID after multiple attempts');
     }
 
-    await StaffAudit.create({
-      staff: staff._id,
-      action: 'created',
-      fieldsChanged: Object.keys(staff.toObject()),
-      performedBy: req.user.id
-    });
+   
 
     res.status(201).json({
       success: true,
@@ -161,7 +157,7 @@ exports.getStaffById = async (req, res) => {
 // @access  Private
 exports.searchStaff = async (req, res) => {
   try {
-    const { staffId, firstName, lastName, position, department, gender } = req.query;
+    const { staffId, firstName, lastName,middleName, position, department, gender } = req.query;
 
     const query = {};
     if (staffId) {
@@ -171,6 +167,9 @@ exports.searchStaff = async (req, res) => {
       query.firstName = { $regex: firstName, $options: 'i' };
     }
     if (lastName) {
+      query.lastName = { $regex: lastName, $options: 'i' };
+    }
+     if (middleName) {
       query.lastName = { $regex: lastName, $options: 'i' };
     }
     if (position) {
@@ -206,22 +205,11 @@ exports.updateStaff = async (req, res) => {
       currentAddress, nationalID, startYear, endYear,name,nationality,maritalStatus,ssn,yearOfEmployment,payrollNumber
     } = req.body;
 
-    const cleanupFiles = (files) => {
-      if (files) {
-        Object.values(files).forEach(fileArray => {
-          fileArray.forEach(file => {
-            if (fs.existsSync(file.path)) {
-              fs.unlinkSync(file.path);
-              console.log('Deleted uploaded file:', file.path);
-            }
-          });
-        });
-      }
-    };
+ 
 
     let staff = await Staff.findById(req.params.id);
     if (!staff) {
-      cleanupFiles(req.files);
+  
       return res.status(404).json({ success: false, msg: 'Staff not found' });
     }
 
@@ -229,7 +217,7 @@ exports.updateStaff = async (req, res) => {
     if (email && email !== staff.email) {
       const existingStaffWithEmail = await Staff.findOne({ email });
       if (existingStaffWithEmail && String(existingStaffWithEmail._id) !== String(staff._id)) {
-        cleanupFiles(req.files);
+      
         return res.status(409).json({ success: false, msg: 'Staff with this email already exists' });
       }
     }
@@ -259,58 +247,36 @@ exports.updateStaff = async (req, res) => {
     if (qualifications !== undefined) {
       staff.qualifications = qualifications ? qualifications.split(',').map(q => q.trim()) : [];
     }
-
+  
     // Institution Attended
     if (!staff.institutionAttended) staff.institutionAttended = {};
     if (name !== undefined) staff.institutionAttended.name = String(name);
     if (startYear !== undefined) staff.institutionAttended.startYear = Number(startYear);
     if (endYear !== undefined) staff.institutionAttended.endYear = Number(endYear);
     
+  
 
     // === Photo Upload ===
-    if (req.files?.photo?.length > 0) {
-      if (staff.photo && fs.existsSync(staff.photo)) {
-        fs.unlinkSync(staff.photo);
+    if (req.body.uploadedUrls?.photo) {
+      if (staff.photo) {
+        const key = getS3KeyFromUrl(staff.photo);
+        if (key) await s3.send(new DeleteObjectCommand({ Bucket: config.AWS_BUCKET_NAME, Key: key }));
       }
-      staff.photo = `uploads/staff/${path.basename(req.files.photo[0].path)}`;
+      staff.photo = req.body.uploadedUrls.photo;
     }
-
+    
     //  Certificates Upload - Handle multiple certificates properly
-    if (req.files?.certificates?.length > 0) {
-      // Delete old certificate files if they exist
-      if (staff.certificates && Array.isArray(staff.certificates)) {
-        staff.certificates.forEach(cert => {
-          if (fs.existsSync(cert)) {
-            fs.unlinkSync(cert);
-          }
-        });
-      }
-      // Add new certificates
-      staff.certificates = req.files.certificates.map(file =>
-        `uploads/certificate/${path.basename(file.path)}`
-      );
-    }
+if (req.body.uploadedUrls?.certificates) {
+  const newCertificateUrls = Array.isArray(req.body.uploadedUrls.certificates)
+    ? req.body.uploadedUrls.certificates
+    : [req.body.uploadedUrls.certificates];
 
+  //  Append new certs to existing ones
+  staff.certificates = [...staff.certificates, ...newCertificateUrls]; 
+}
     await staff.save();
 
-    // === Audit Trail ===
-    const changedFields = [];
-    for (const key in staff._doc) {
-      if (['_id', 'staffId', 'createdAt', 'updatedAt', '__v'].includes(key)) continue;
-      if (JSON.stringify(originalStaff[key]) !== JSON.stringify(staff[key])) {
-        changedFields.push(key);
-      }
-    }  
-
-    if (changedFields.length > 0 || req.files?.photo || req.files?.certificates) {
-      await StaffAudit.create({
-        staff: staff._id,
-        action: 'updated',
-        fieldsChanged: changedFields.length > 0 ? changedFields : ['file_upload'],
-        performedBy: req.user.id
-      });
-    }
-
+   
     res.status(200).json({
       success: true,
       msg: 'Staff updated successfully',
@@ -335,29 +301,33 @@ exports.deleteStaff = async (req, res) => {
     }
 
     // Remove photo
-    if (staff.photo && fs.existsSync(staff.photo)) {
-      fs.unlinkSync(staff.photo);
-      console.log('Deleted staff photo:', staff.photo);
-    }
+   const getKeyFromUrl = (url) => {
+     const parts = url.split('/');
+     return parts.slice(3).join('/'); // e.g., 'student/photo-abc123.jpg'
+   };
+   
+   if (staff.photo) {
+     const key = getKeyFromUrl(staff.photo);
+     await s3.send(new DeleteObjectCommand({
+       Bucket: config.AWS_BUCKET_NAME,
+       Key: key,
+     }));
+   }
     
     //  Remove all certificate files
-    if (staff.certificates && Array.isArray(staff.certificates)) {
-      staff.certificates.forEach(cert => {
-        if (fs.existsSync(cert)) {
-          fs.unlinkSync(cert);
-          console.log('Deleted staff certificate:', cert);
-        }
-      });
+    if (Array.isArray(staff.certificates)) {
+  for (const certUrl of staff.certificates) {
+    const key = getKeyFromUrl(certUrl);
+    if (key) {
+      await s3.send(new DeleteObjectCommand({
+        Bucket: config.AWS_BUCKET_NAME,
+        Key: key,
+      }));
     }
+  }
+}
     
-    // Audit trail for staff deletion
-    await StaffAudit.create({
-      staff: staff._id,
-      action: 'deleted',
-      fieldsChanged: [], // No specific fields changed, the record itself is deleted
-      performedBy: req.user.id
-    });
-
+  
     await Staff.findByIdAndDelete(req.params.id);
 
     res.status(200).json({ success: true, msg: 'Staff deleted successfully' });
@@ -367,23 +337,86 @@ exports.deleteStaff = async (req, res) => {
   }
 };
 
+
+//Staff Documents
+exports.getStaffDocuments = async (req, res) => {
+  try {
+    const staff = await Staff.findById(req.params.id);
+    if (!staff) {
+      return res.status(404).json({ success: false, message: 'Staff not found' });
+    }
+
+    const documents = {
+      photo: staff.photo || null,
+      certificates: staff.certificates || []
+    };
+
+    res.status(200).json({ success: true, documents });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error fetching documents', error: err.message });
+  }
+};
+
+// @desc    Download staff document
+// @route   GET /api/staff/download-document
+// @access  Private
+exports.downloadStaffDocument = async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({ success: false, msg: 'Document URL is required' });
+    }
+
+    // Extract the S3 key from the URL
+    const urlParts = new URL(url);
+    const key = urlParts.pathname.substring(1); 
+
+    const command = new GetObjectCommand({
+      Bucket: config.AWS_BUCKET_NAME,
+      Key: key,
+    });
+
+    const response = await s3.send(command);
+    
+    // Set appropriate headers
+    const contentType = response.ContentType || 'application/octet-stream';
+    const contentDisposition = `attachment; filename="${key.split('/').pop()}"`;
+    
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', contentDisposition);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    
+    // Stream the file
+    response.Body.pipe(res);
+    
+  } catch (error) {
+    console.error('Download document error:', error);
+    res.status(500).json({ 
+      success: false, 
+      msg: 'Failed to download document', 
+      error: error.message 
+    });
+  }
+};
+
 // @desc    get staffAudit
 // @route   GET /api/staff/:id/audit
 // @access  Private
-exports.getStaffAuditTrail = async (req, res) => {
-  try {
-    const auditTrail = await StaffAudit.find({ staff: req.params.id })
-      .populate('performedBy', 'email') // Populate with email of user who performed action
-      .sort({ timestamp: -1 });
+// exports.getStaffAuditTrail = async (req, res) => {
+//   try {
+//     const auditTrail = await StaffAudit.find({ staff: req.params.id })
+//       .populate('performedBy', 'email') // Populate with email of user who performed action
+//       .sort({ timestamp: -1 });
 
-    if (!auditTrail) {
-      return res.status(404).json({ success: false, msg: 'Audit trail not found for this staff member' });
-    }
+//     if (!auditTrail) {
+//       return res.status(404).json({ success: false, msg: 'Audit trail not found for this staff member' });
+//     }
 
-    res.status(200).json({ success: true, data: auditTrail });
+//     res.status(200).json({ success: true, data: auditTrail });
      
-  } catch (err) {
-    console.error('Get staff audit trail error:', err);
-    res.status(500).json({ success: false, msg: 'Server Error', error: err.message });
-  }
-};
+//   } catch (err) {
+//     console.error('Get staff audit trail error:', err);
+//     res.status(500).json({ success: false, msg: 'Server Error', error: err.message });
+//   }
+// };

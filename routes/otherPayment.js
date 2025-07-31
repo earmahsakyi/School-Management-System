@@ -1,17 +1,19 @@
 const express = require('express');
 const { 
-  createPaymentAndGenerateReceipt,
+  createPayment,
   getAllPayments,
   getPaymentById,
   updatePayment,
   deletePayment,
-  getPaymentStats
+  getPaymentStats,
+  generateBatchReceipts
 } = require('../controllers/otherPaymentController');
 
 const router = express.Router();
 
 // Create payment and generate receipt
-router.post('/generate-receipt', createPaymentAndGenerateReceipt);
+router.post('/generate-receipt', createPayment);
+router.get('/batch-receipts', generateBatchReceipts);
 
 // Get all payments with filtering and pagination
 router.get('/', getAllPayments);

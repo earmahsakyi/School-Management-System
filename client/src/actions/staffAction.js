@@ -17,7 +17,11 @@ import {
   GET_STAFF_AUDIT_FAIL,
   CLEAR_STAFF,
   CLEAR_STAFF_ERRORS,
-  STAFF_ERROR
+  STAFF_ERROR,
+   GET_STAFF_DOCUMENTS_REQUEST,
+  GET_STAFF_DOCUMENTS_SUCCESS,
+  GET_STAFF_DOCUMENTS_FAIL,
+  CLEAR_STAFF_DOCUMENTS
 } from './types';
 
 // Set loading state
@@ -219,6 +223,46 @@ export const getStaffAuditTrail = (id) => async (dispatch) => {
     });
     throw err;
   }
+};
+
+// Get staff documents
+export const getStaffDocuments = (staffId) => async (dispatch, getState) => {
+  try {
+    dispatch({ type: GET_STAFF_DOCUMENTS_REQUEST });
+
+    const {
+      auth: { token }
+    } = getState();
+
+    const config = {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-token': token
+      }
+    };
+
+    const res = await fetch(`/api/staff/staff-documents/${staffId}`, config);
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to fetch staff documents');
+    }
+    
+    dispatch({
+      type: GET_STAFF_DOCUMENTS_SUCCESS,
+      payload: data.documents
+    });
+  } catch (error) {
+    dispatch({
+      type: GET_STAFF_DOCUMENTS_FAIL,
+      payload: error.message
+    });
+  }
+};
+
+// Clear staff documents
+export const clearStaffDocuments = () => (dispatch) => {
+  dispatch({ type: CLEAR_STAFF_DOCUMENTS });
 };
 
 // Clear staff data

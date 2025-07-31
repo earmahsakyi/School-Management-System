@@ -47,6 +47,7 @@ exports.getReportCardData = async (req, res) => {
           _id: student._id,
           firstName: student.firstName,
           lastName: student.lastName,
+          middleName: student.middleName || '',
           gender: student.gender,
           gradeLevel: student.gradeLevel,
           admissionNumber: student.admissionNumber,

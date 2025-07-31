@@ -35,6 +35,10 @@ GET_ELIGIBLE_STUDENTS_REQUEST ,
  GET_ELIGIBLE_STUDENTS_SUCCESS ,
  GET_ELIGIBLE_STUDENTS_FAIL ,
 CLEAR_PROMOTION_DATA ,
+ GET_STUDENT_DOCUMENTS_REQUEST, 
+GET_STUDENT_DOCUMENTS_SUCCESS ,
+ GET_STUDENT_DOCUMENTS_FAIL,
+ CLEAR_STUDENT_DOCUMENTS ,
 } from './types';
 
 // Set loading state
@@ -506,4 +510,44 @@ export const getEligibleStudents = (gradeLevel, academicYear, department = 'all'
 // Clear promotion data
 export const clearPromotionData = () => (dispatch) => {
   dispatch({ type: CLEAR_PROMOTION_DATA });
+};
+
+//student documents
+export const getStudentDocuments = (studentId) => async (dispatch, getState) => {
+  try {
+    dispatch({ type: GET_STUDENT_DOCUMENTS_REQUEST });
+
+    const {
+      auth: { token }
+    } = getState();
+
+    const config = {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-token': token
+      }
+    };
+
+    const res = await fetch(`/api/student/student-documents/${studentId}`, config);
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to fetch staff documents');
+    }
+    
+    dispatch({
+      type: GET_STUDENT_DOCUMENTS_SUCCESS,
+      payload: data.documents
+    });
+  } catch (error) {
+    dispatch({
+      type: GET_STUDENT_DOCUMENTS_FAIL,
+      payload: error.message
+    });
+  }
+};
+
+// Clear staff documents
+export const clearStudentDocuments = () => (dispatch) => {
+  dispatch({ type: CLEAR_STUDENT_DOCUMENTS });
 };
