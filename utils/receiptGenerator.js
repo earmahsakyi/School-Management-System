@@ -175,7 +175,7 @@ const generateReceiptsPdf = async ({ receipts }) => {
                     <p><strong>MOE Registration:</strong> <span class="underline">${payment.moeRegistration}</span></p>
                     <p>
                       <strong>Student ID:</strong> <span class="underline">${student.admissionNumber}</span>
-                      <strong> Name:</strong> <span class="underline">${student.lastName} ${student.firstName} ${student.middleName?.middleName || ''}</span>
+                      <strong> Name:</strong> <span class="underline">${student.lastName} ${student.firstName} ${student?.middleName || ''}</span>
                     </p>
                     <div style="display: flex; justify-content: space-between;">
                       <p><strong>Description</strong></p>

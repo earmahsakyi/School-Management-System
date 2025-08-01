@@ -60,6 +60,7 @@ exports.createPayment = async (req, res) => {
           _id: student._id,
           firstName: student.firstName,
           lastName: student.lastName,
+          middleName: student.middleName || '',
           admissionNumber: student.admissionNumber
         },
         receiptNumber: newPayment.receiptNumber,
