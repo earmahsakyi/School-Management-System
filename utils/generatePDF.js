@@ -447,7 +447,7 @@ const generatePdf = async (reportCardData) => {
         </div>
 
         <p style="text-align: center; margin-top: 10mm;">
-          Date: <span class="underline">${new Date().toLocaleDateString()}</span>
+          Date: <span class="underline"></span>
         </p>
         <p class="note"><strong>NOTE:</strong> Any erasure on this card makes it invalid</p>
       </div>

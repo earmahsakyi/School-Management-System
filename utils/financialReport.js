@@ -34,22 +34,22 @@ const generateFinancialReportPdf = async ({ payments, gradeLevel, classSection, 
     <head>
       <title>Financial Report</title>
       <style>
-        body { font-family: 'Times New Roman', Times, serif; margin: 20mm; font-size: 10pt; color: #333; }
-        .header { text-align: center; margin-bottom: 20mm; }
-        .header-content { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        body { font-family: 'Times New Roman', Times, serif; margin: 10mm; font-size: 10pt; color: #333; }
+        .header { text-align: center; margin-bottom: 10mm; }
+        .header-content { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .header-text { flex: 1; text-align: center; }
-        .school-name { font-size: 16pt; font-weight: bold; margin-bottom: 5px; }
-        .school-location { font-size: 12pt; margin-bottom: 3px; }
-        .country { font-size: 12pt; margin-bottom: 3px; }
-        .contact { font-size: 10pt; margin-bottom: 10px; }
-        .document-title { font-size: 14pt; text-align: center; margin-bottom: 15px; font-weight: bold; }
-        .academic-year { text-align: center; margin-bottom: 10px; font-size: 12pt; }
-        .class-info { text-align: left; margin-bottom: 15px; font-size: 11pt; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 9pt; }
-        th, td { border: 1px solid #333; padding: 6px; text-align: left; }
+        .school-name { font-size: 14pt; font-weight: bold; margin-bottom: 3px; }
+        .school-location { font-size: 11pt; margin-bottom: 2px; }
+        .country { font-size: 11pt; margin-bottom: 2px; }
+        .contact { font-size: 9pt; margin-bottom: 5px; }
+        .document-title { font-size: 12pt; text-align: center; margin-bottom: 10px; font-weight: bold; }
+        .academic-year { text-align: center; margin-bottom: 5px; font-size: 11pt; }
+        .class-info { text-align: left; margin-bottom: 10px; font-size: 10pt; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 8pt; }
+        th, td { border: 1px solid #333; padding: 4px; text-align: left; }
         th { background-color: #f2f2f2; font-weight: bold; text-align: center; }
         .total-row { font-weight: bold; background-color: #f9f9f9; }
-        .filters { margin-bottom: 15px; font-size: 10pt; }
+        .filters { margin-bottom: 10px; font-size: 9pt; }
         .center { text-align: center; }
         .underline { text-decoration: underline; }
       </style>
@@ -57,14 +57,14 @@ const generateFinancialReportPdf = async ({ payments, gradeLevel, classSection, 
     <body>
       <div class="header">
         <div class="header-content">
-            <img src="data:image/png;base64,${logo1Base64}" style="height: 80px; width: auto;" />
+            <img src="data:image/png;base64,${logo1Base64}" style="height: 70px; width: auto;" />
             <div class="header-text">
                 <h1 class="school-name">VOINJAMA MULTILATERAL HIGH SCHOOL</h1>
                 <p class="school-location">VOINJAMA CITY, LOFA COUNTY</p>
                 <p class="country">REPUBLIC OF LIBERIA</p>
                 <p class="contact">0776990187 / 0886962672</p>
             </div>
-            <img src="data:image/png;base64,${logo2Base64}" style="height: 80px; width: auto;" />
+            <img src="data:image/png;base64,${logo2Base64}" style="height: 70px; width: auto;" />
         </div>
         
         <h2 class="document-title">MOE STUDENTS REGISTRATION FINANCIAL REPORTS</h2>
@@ -109,7 +109,7 @@ const generateFinancialReportPdf = async ({ payments, gradeLevel, classSection, 
         </tbody>
       </table>
 
-      <div style="margin-top: 30px; font-size: 10pt;">
+      <div style="margin-top: 20px; font-size: 9pt;">
         <p><strong>Report Summary:</strong></p>
         <p>Total Students with Payments: ${payments.length}</p>
         <p>Total Amount Collected: $${totalAmount.toFixed(2)} LRD</p>
@@ -128,7 +128,7 @@ const generateFinancialReportPdf = async ({ payments, gradeLevel, classSection, 
   const pdfBuffer = await page.pdf({
     format: 'A4',
     printBackground: true,
-    margin: { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' },
+    margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' },
   });
   await browser.close();
   return pdfBuffer;

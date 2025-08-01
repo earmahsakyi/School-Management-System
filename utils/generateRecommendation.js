@@ -33,11 +33,11 @@ const generateRecommendationPdf = async (student, recommendationData = {}) => {
 <style>
 body {
       font-family: 'Times New Roman', Times, serif;
-      margin: 20mm;
+      margin: 15mm;
       font-size: 11pt;
       color: #333;
       position: relative;
-      line-height: 1.4;
+      line-height: 1.3;
     }
     
     .watermark {
@@ -60,14 +60,14 @@ body {
     
     .header {
       text-align: center;
-      margin-bottom: 15mm;
+      margin-bottom: 10mm;
     }
     
     .header-content {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 10mm;
+      margin-bottom: 5mm;
     }
     
     .header-text {
@@ -76,48 +76,48 @@ body {
     }
     
     .school-name {
-      font-size: 18pt;
+      font-size: 16pt;
       font-weight: bold;
       color: chocolate;
-      margin: 5px 0;
+      margin: 3px 0;
     }
     
     .school-location {
-      font-size: 12pt;
-      margin: 3px 0;
+      font-size: 11pt;
+      margin: 2px 0;
     }
     
     .country {
-      font-size: 12pt;
+      font-size: 11pt;
       font-weight: bold;
-      margin: 3px 0;
+      margin: 2px 0;
     }
     
     .contact {
-      font-size: 10pt;
+      font-size: 9pt;
       color: #666;
-      margin: 3px 0;
+      margin: 2px 0;
     }
     
     .document-title {
-      font-size: 16pt;
+      font-size: 14pt;
       font-weight: bold;
       text-decoration: underline;
       color: teal;
-      margin: 10mm 0 5mm 0;
+      margin: 5mm 0 3mm 0;
     }
     
     .seal-img {
-      max-width: 80px;
+      max-width: 70px;
       height: auto;
     }
     
     .student-info {
-      margin: 15mm 0;
+      margin: 10mm 0;
     }
     
     .student-info p {
-      margin: 8px 0;
+      margin: 6px 0;
       font-size: 11pt;
     }
     
@@ -131,18 +131,18 @@ body {
     
     .date-section {
       text-align: right;
-      margin-bottom: 10mm;
+      margin-bottom: 8mm;
     }
     
     .characteristics-section {
-      margin: 15px 0;
+      margin: 10px 0;
     }
     
     .characteristics-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin: 10px 0;
+      gap: 5px;
+      margin: 8px 0;
     }
     
     .checkbox-item {
@@ -158,20 +158,20 @@ body {
     }
     
     .signatures {
-      margin-top: 20mm;
+      margin-top: 15mm;
     }
     
     .signature-line {
       display: inline-block;
       border-bottom: 2px solid #000;
       width: 400px;
-      margin-bottom: 5px;
+      margin-bottom: 3px;
       color: red;
     }
     
     @media print {
       body {
-        margin: 15mm;
+        margin: 10mm;
       }
       
       .container {
@@ -233,11 +233,11 @@ body {
         <p>Please accept my thanks for your assistance in the premise.</p>
       </div>
       
-      <p style="margin-top: 20px;">Sincerely yours,</p>
+      <p style="margin-top: 15px;">Sincerely yours,</p>
       
       <div class="signatures">
         <p>Signed: <span class="signature-line"></span></p>
-        <p style="text-align: center; margin-top: 10px;"><strong>Principal, VMHS</strong></p>
+        <p style="text-align: center; margin-top: 5px;"><strong>Principal, VMHS</strong></p>
       </div>
     </div>
   </div>
