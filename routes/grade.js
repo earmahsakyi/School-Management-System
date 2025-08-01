@@ -72,7 +72,7 @@ router.post('/', auth, createGrade);
 router.get('/', auth, getAllGrades);
 
 //Search route must come before parameterized routes
-router.get('/students/search',  searchStudents);
+router.get('/students/search',auth,  searchStudents);
 
 router.get('/:id', auth, getGradeById);
 router.put('/:id', auth, updateGrade);
