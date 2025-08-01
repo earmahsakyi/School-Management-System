@@ -19,7 +19,7 @@ const generatePdf = async (reportCardData) => {
 
     const totalDaysPresent = grades.reduce((sum, g) => sum + (g.attendance?.daysPresent || 0), 0);
     const totalDaysAbsent = grades.reduce((sum, g) => sum + (g.attendance?.daysAbsent || 0), 0);
-    const totalTimesTardy = grades.reduce((sum, g) => sum + (g.attendance?.timesTardy || 0), 0);
+    const totalTimesTardy = grades.reduce((sum, g) + (g.attendance?.timesTardy || 0), 0);
     const attendanceRate = totalDaysPresent + totalDaysAbsent > 0 ?
       ((totalDaysPresent / (totalDaysPresent + totalDaysAbsent)) * 100).toFixed(1) : '0.0';
 
@@ -237,18 +237,20 @@ const generatePdf = async (reportCardData) => {
 
     .signatures-section {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column; /* Stack signature boxes vertically */
+      align-items: center; /* Center the entire section horizontally */
       margin-top: 20px;
     }
 
     .signature-box {
       text-align: center;
+      width: 100%; /* Ensure each box takes full width to center its content */
     }
 
     .signature-line {
       border-bottom: 1px solid black;
-      width: 100px;
-      margin: 10px auto;
+      width: 150px; /* Adjust line width as needed */
+      margin: 10px auto; /* Center the line */
     }
 
     .seal-img {
@@ -437,12 +439,10 @@ const generatePdf = async (reportCardData) => {
           <div class="signature-box">
             <div class="signature-line"></div>
             <p><strong>REGISTRAR</strong></p>
-            
           </div>
           <div class="signature-box">
             <div class="signature-line"></div>
             <p><strong>PRINCIPAL</strong></p>
-         
           </div>
         </div>
 
