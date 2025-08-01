@@ -103,6 +103,25 @@ const generatePdf = async (reportCardData) => {
       });
     });
 
+    // Function to calculate yearly average
+    const calculateYearlyAverage = (subject) => {
+      const sem1Average = gradesBySubjectTerm1[subject]?.average;
+      const sem2Average = gradesBySubjectTerm2[subject]?.average;
+      
+      // Only calculate if both semester averages exist and are not empty
+      if (sem1Average !== '' && sem1Average !== null && sem1Average !== undefined &&
+          sem2Average !== '' && sem2Average !== null && sem2Average !== undefined) {
+        const avg1 = parseFloat(sem1Average);
+        const avg2 = parseFloat(sem2Average);
+        
+        if (!isNaN(avg1) && !isNaN(avg2)) {
+          return ((avg1 + avg2) / 2).toFixed(2);
+        }
+      }
+      
+      return ''; // Return empty string if conditions not met
+    };
+
     const getPromotionCheckboxes = () => {
       const status = student.promotionStatus;
       return {
@@ -153,20 +172,24 @@ const generatePdf = async (reportCardData) => {
       `;
     }).join('');
 
-    // Filter subjectOrder to include only subjects present in gradesBySubjectTerm2
-    const subjectsForSemester2 = subjectOrder.filter(subject => gradesBySubjectTerm2[subject]);
+    // Get all subjects that appear in either semester (for semester 2 table)
+    const allSubjects = [...new Set([...Object.keys(gradesBySubjectTerm1), ...Object.keys(gradesBySubjectTerm2)])];
+    const subjectsForSemester2 = subjectOrder.filter(subject => allSubjects.includes(subject));
 
-    // Generate subject rows for Semester 2 Table (Periods 4, 5, 6)
+    // Generate subject rows for Semester 2 Table (Periods 4, 5, 6) with yearly average
     const subjectRowsSemester2 = subjectsForSemester2.map(subject => {
-      const s = gradesBySubjectTerm2[subject]; // 's' is guaranteed to exist due to filter
+      const s2 = gradesBySubjectTerm2[subject] || { 'p4': '', 'p5': '', 'p6': '', 'exam': '', 'average': '' };
+      const yearlyAvg = calculateYearlyAverage(subject);
+      
       return `
         <tr>
           <td class="subject-cell" style="text-align: left;">${subject}</td>
-          <td class="grade-cell ${getGradeClass(s['p4'])}">${s['p4']}</td>
-          <td class="grade-cell ${getGradeClass(s['p5'])}">${s['p5']}</td>
-          <td class="grade-cell ${getGradeClass(s['p6'])}">${s['p6']}</td>
-          <td class="grade-cell ${getGradeClass(s['exam'])}">${s['exam']}</td>
-          <td class="grade-cell ${getGradeClass(s['average'])}">${s['average']}</td>
+          <td class="grade-cell ${getGradeClass(s2['p4'])}">${s2['p4']}</td>
+          <td class="grade-cell ${getGradeClass(s2['p5'])}">${s2['p5']}</td>
+          <td class="grade-cell ${getGradeClass(s2['p6'])}">${s2['p6']}</td>
+          <td class="grade-cell ${getGradeClass(s2['exam'])}">${s2['exam']}</td>
+          <td class="grade-cell ${getGradeClass(s2['average'])}">${s2['average']}</td>
+          <td class="grade-cell ${getGradeClass(yearlyAvg)}">${yearlyAvg}</td>
         </tr>
       `;
     }).join('');
@@ -521,6 +544,7 @@ const generatePdf = async (reportCardData) => {
             <th style="12%;">3rd Period</th>
             <th style="width: 14%;">Semester Exam</th>
             <th style="width: 15%;">Semester Average</th>
+           
           </tr>
         </thead>
         <tbody>
@@ -531,18 +555,19 @@ const generatePdf = async (reportCardData) => {
       <table>
         <thead>
           <tr>
-            <th style="width: 25%;">SUBJECTS</th>
-            <th style="width: 12%;">4th Period</th>
-            <th style="width: 12%;">5th Period</th>
-            <th style="width: 12%;">6th Period</th>
-            <th style="width: 14%;">Semester Exam</th>
-            <th style="width: 15%;">Semester Average</th>
+            <th style="width: 22%;">SUBJECTS</th>
+            <th style="width: 11%;">4th Period</th>
+            <th style="width: 11%;">5th Period</th>
+            <th style="width: 11%;">6th Period</th>
+            <th style="width: 12%;">Semester Exam</th>
+            <th style="width: 13%;">Semester Average</th>
+            <th style="width: 13%;">Yearly Average</th>
           </tr>
         </thead>
         <tbody>
           ${subjectRowsSemester2}
           <tr>
-            <td style="text-align: left;" colspan="5"><strong>Overall Average</strong></td>
+            <td style="text-align: left;" colspan="6"><strong>Overall Average</strong></td>
             <td class="grade-cell ${getOverallGradeClass(overallAverage)}">${overallAverage}%</td>
           </tr>
         </tbody>
