@@ -846,23 +846,25 @@ const getStudentPerformance = async (req, res) => {
 // Adjust based on your model imports
 const searchStudents = async (req, res) => {
   try {
-    
     if (!req.user || !req.user.id) {
       return res.status(401).json({
         success: false,
         message: 'Unauthorized: User not authenticated'
       });
     }
-    const userId = new mongoose.Types.ObjectId(req.user.id); // Use req.user.id
+    const userId = new mongoose.Types.ObjectId(req.user.id);
+    let studentsQuery;
+
+    // Check if user is a parent
     const parent = await Parent.findOne({ user: userId }).select('students');
-    if (!parent) {
-      return res.status(404).json({
-        success: false,
-        message: 'Parent account not found'
-      });
+    if (parent) {
+      studentsQuery = Student.find({ _id: { $in: parent.students } });
+    } else {
+      // Allow admins or staff to search all students
+      studentsQuery = Student.find({});
     }
+
     const { query } = req.query;
-    let studentsQuery = Student.find({ _id: { $in: parent.students } });
     if (query && query !== 'all') {
       studentsQuery = studentsQuery.or([
         { firstName: { $regex: query, $options: 'i' } },
@@ -871,6 +873,7 @@ const searchStudents = async (req, res) => {
         { admissionNumber: { $regex: query, $options: 'i' } }
       ]);
     }
+
     const students = await studentsQuery.select('firstName lastName middleName admissionNumber gradeLevel department classSection');
     res.status(200).json({
       success: true,
