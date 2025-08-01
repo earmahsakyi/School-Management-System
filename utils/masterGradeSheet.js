@@ -16,6 +16,7 @@ const generateMasterGradeSheetPdf = async ({ students, gradeLevel, classSection,
       <td>${student.admissionNumber}</td>
       <td></td><td></td><td></td><td></td><td></td>
       <td></td><td></td><td></td><td></td><td></td>
+      <td></td>
     </tr>
   `).join('');
 
@@ -145,6 +146,7 @@ const generateMasterGradeSheetPdf = async ({ students, gradeLevel, classSection,
           <th>6th</th>
           <th>Exam</th>
           <th>Avg</th>
+          <th>Yr Avg</th>
         </tr>
       </thead>
       <tbody>
