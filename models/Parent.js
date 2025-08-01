@@ -17,9 +17,7 @@ const parentSchema = new mongoose.Schema({
     trim: true
   },
  email: {
-    type: String,
-    unique: true,
-    sparse: true, 
+    type: String, 
     validate: {
       validator: function(v) {
         return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -36,5 +34,15 @@ const parentSchema = new mongoose.Schema({
     ref: 'User'
   }
 }, { timestamps: true });
+
+parentSchema.index(
+  { email: 1 }, 
+  { 
+    unique: true, 
+    partialFilterExpression: { 
+      email: { $exists: true, $ne: null, $ne: "" } 
+    } 
+  }
+);
 
 module.exports = mongoose.model('Parent', parentSchema);

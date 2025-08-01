@@ -100,7 +100,7 @@ exports.createStaff = async (req, res) => {
     }
 
     if (!staff) {
-      cleanupFiles(req.files);
+      
       throw new Error('Failed to generate unique Staff ID after multiple attempts');
     }
 
@@ -113,7 +113,7 @@ exports.createStaff = async (req, res) => {
 
   } catch (err) {
     console.error('Create staff error:', err);
-    cleanupFiles(req.files);
+   
     res.status(500).json({ success: false, msg: 'Server Error', error: err.message });
   }
 };
@@ -284,7 +284,7 @@ if (req.body.uploadedUrls?.certificates) {
 
   } catch (err) {
     console.error('Update staff error:', err);
-    cleanupFiles(req.files);
+   
     res.status(500).json({ success: false, msg: 'Server Error', error: err.message });
   }
 };

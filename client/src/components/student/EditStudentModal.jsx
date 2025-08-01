@@ -108,7 +108,7 @@ export function EditStudentModal({
       setValue('guardianEmail', studentData.parent?.email || '');
       setValue('guardianPhone', studentData.parent?.phone || '');
       setValue('guardianOccupation', studentData.parent?.occupation || '');
-      console.log(studentData.parent)
+      
       // Set existing files
       if (studentData.photo) {
         setExistingPhotoUrl(getStudentAvatar(studentData));
