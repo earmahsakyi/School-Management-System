@@ -472,7 +472,7 @@ const generatePdf = async (reportCardData) => {
 
       <div class="semester-info" style="text-align: center; margin-bottom: 5px;">
         <h3 style="margin: 0; font-size: 12px;">
-          Academic Year: <span>${grades[0]?.academicYear || '2024-2025'}</span> |
+          Academic Year: <span>${grades[0]?.academicYear || '2024-2025'}</span> 
           
         </h3>
       </div>
