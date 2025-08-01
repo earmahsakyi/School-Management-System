@@ -18,18 +18,26 @@ const parentSchema = new mongoose.Schema({
   },
 email: {
   type: String,
-  unique: true,
-  sparse: true,
-  set: function(v) {
-    // Convert null, empty string, or undefined to undefined
-    return (v === null || v === '' || v === undefined) ? undefined : v;
-  },
-  validate: {
-    validator: function(v) {
-      return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  validate: [
+    {
+      validator: function(v) {
+        return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      },
+      message: 'Please enter a valid email address'
     },
-    message: 'Please enter a valid email address'
-  }
+    {
+      validator: async function(v) {
+        if (!v) return true; // Allow empty/null values
+        
+        const count = await this.constructor.countDocuments({ 
+          email: v, 
+          _id: { $ne: this._id } 
+        });
+        return count === 0;
+      },
+      message: 'Email already exists'
+    }
+  ]
 },
   students: [{
     type: mongoose.Schema.Types.ObjectId,
