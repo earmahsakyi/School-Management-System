@@ -118,19 +118,10 @@ const OtherPaymentModal = ({ open, onOpenChange, onSuccess }) => {
         throw new Error(errorData.message || 'Failed to create payment');
       }
 
-      // Handle PDF download
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `receipt-${Date.now()}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      
+      
 
-      toast.success("Payment recorded successfully and receipt downloaded!");
+      toast.success("Payment recorded successfully!");
       onSuccess();
       onOpenChange(false);
       resetForm();

@@ -3,6 +3,14 @@ const fs = require('fs');
 const path = require('path');
 
 const generateReceiptPdf = async ({ student, payment }) => {
+  // Validate required fields
+  if (!student.firstName || !student.lastName) {
+    throw new Error('Student firstName and lastName are required');
+  }
+  if (!payment.receiptNumber || !payment.amount || !payment.academicYear || !payment.paymentOf) {
+    throw new Error('Payment receiptNumber, amount, academicYear, and paymentOf are required');
+  }
+
   const browser = await puppeteer.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -182,12 +190,12 @@ const generateReceiptPdf = async ({ student, payment }) => {
 
         <div class="student-info">
           <p><strong>Receipt No:</strong> <span class="underline">${payment.receiptNumber}</span>
-             <strong>Deposit No:</strong><span class="underline">${payment.bankDepositNumber || ''}</span></p>
+             <strong>Deposit No:</strong><span class="underline">${payment.bankDepositNumber || '-'}</span></p>
           <p><strong>Other Payments:</strong> <span class="underline">${payment.paymentOf}</span></p>
           <p><strong>Student ID:</strong><span class="underline">${student.admissionNumber}</span>
-             <strong>Student Name:</strong><span class="underline">${student.lastName} ${student.firstName}  ${student.middleName || ''}</span>
+             <strong>Student Name:</strong><span class="underline">${student.lastName} ${student.firstName} ${student.middleName || ''}</span>
           </p>
-          <p><strong>Grade Level:</strong> <span class="underline">Grade ${student.gradeLevel}</span>
+          <p><strong>Grade Level:</strong> <span class="underline">${student.gradeLevel}</span>
              <strong>Department:</strong> <span class="underline">${student.department}</span>
           </p>
           <p><strong>Amount Paid:</strong> <span class="underline">${new Intl.NumberFormat('en-LR', {
@@ -196,18 +204,17 @@ const generateReceiptPdf = async ({ student, payment }) => {
             minimumFractionDigits: 2
           }).format(payment.amount)}</span></p>
           <p><strong>Academic Year:</strong> <span class="underline">${payment.academicYear}</span></p>
+          <p><strong>Date of Payment:</strong> <span class="underline">${payment.dateOfPayment}</span></p>
           <p><strong>Description:</strong> <span class="underline">${payment.description}</span></p>
         </div>
 
         <div class="signatures">
           <div>
             <p>Signed:<span class="signature-line"></span></p>
-            
             <p>Business Manager</p>
           </div>
           <div>
-            <p>Received By:</p>
-            <span class="signature-line"></span>
+            <p>Received By:<span class="signature-line"></span></p>
             <p>Student/Guardian</p>
           </div>
         </div>
@@ -253,10 +260,24 @@ const generateBatchReceiptsPdf = async (payments) => {
       throw new Error('Payments array is empty or invalid');
     }
 
-    // Filter valid payments
-    const validPayments = payments.filter((payment, index) => {
-      if (!payment || !payment.student || !payment.receiptNumber) {
-        console.warn(`Skipping invalid payment at index ${index}:`, payment);
+    // Filter valid payments with detailed logging
+    const validPayments = payments.filter((item, index) => {
+      const isValid = item &&
+        item.student &&
+        item.payment &&
+        item.payment.receiptNumber &&
+        typeof item.student.firstName === 'string' && item.student.firstName.trim() !== '' &&
+        typeof item.student.lastName === 'string' && item.student.lastName.trim() !== '';
+      if (!isValid) {
+        console.warn(`Skipping invalid payment at index ${index}:`, {
+          hasStudent: !!item?.student,
+          hasPayment: !!item?.payment,
+          hasReceiptNumber: !!item?.payment?.receiptNumber,
+          hasFirstName: !!item?.student?.firstName,
+          hasLastName: !!item?.student?.lastName,
+          firstName: item?.student?.firstName,
+          lastName: item?.student?.lastName
+        });
         return false;
       }
       return true;
@@ -400,7 +421,7 @@ const generateBatchReceiptsPdf = async (payments) => {
       <body>
         ${pages.map(pageReceipts => `
           <div class="page">
-            ${pageReceipts.map(payment => `
+            ${pageReceipts.map(({ student, payment }) => `
               <div class="receipt">
                 <div class="watermark">VMHS Academic Receipt</div>
                 <div class="container">
@@ -422,27 +443,28 @@ const generateBatchReceiptsPdf = async (payments) => {
                   </div>
                   <div class="student-info">
                     <p>
-                      <strong>Receipt No:</strong> <span class="underline">${payment.receiptNumber || 'N/A'}</span>
-                      <strong>Deposit No:</strong> <span class="underline">${payment.bankDepositNumber || ''}</span>
+                      <strong>Receipt No:</strong> <span class="underline">${payment.receiptNumber}</span>
+                      <strong>Deposit No:</strong> <span class="underline">${payment.bankDepositNumber || '-'}</span>
                     </p>
-                    <p><strong>Other Payments:</strong> <span class="underline">${payment.paymentOf || 'N/A'}</span></p>
+                    <p><strong>Other Payments:</strong> <span class="underline">${payment.paymentOf}</span></p>
                     <p>
-                      <strong>Student ID:</strong> <span class="underline">${payment.student?.admissionNumber || 'N/A'}</span>
-                      <strong>Name:</strong> <span class="underline">${payment.student?.lastName || ''} ${payment.student?.firstName || ''}  ${payment.student?.middleName || ''}</span>
+                      <strong>Student ID:</strong> <span class="underline">${student.admissionNumber}</span>
+                      <strong>Name:</strong> <span class="underline">${student.lastName} ${student.firstName} ${student.middleName || ''}</span>
                     </p>
                     <p>
-                      <strong>Grade:</strong> <span class="underline">${payment.student?.gradeLevel ? `Grade ${payment.student.gradeLevel}` : 'N/A'}</span>
-                      <strong>Dept:</strong> <span class="underline">${payment.student?.department || 'N/A'}</span>
+                      <strong>Grade:</strong> <span class="underline">${student.gradeLevel}</span>
+                      <strong>Dept:</strong> <span class="underline">${student.department}</span>
                     </p>
-                    <p><strong>Amount:</strong> <span class="underline">${payment.amount ? new Intl.NumberFormat('en-LR', {
+                    <p><strong>Amount:</strong> <span class="underline">${new Intl.NumberFormat('en-LR', {
                       style: 'currency',
                       currency: 'LRD',
                       minimumFractionDigits: 2
-                    }).format(payment.amount) : 'N/A'}</span></p>
-                    <p><strong>Academic Year:</strong> <span class="underline">${payment.academicYear || 'N/A'}</span></p>
-                    <p><strong>Description:</strong> <span class="underline">${payment.description || 'N/A'}</span></p>
+                    }).format(payment.amount)}</span></p>
+                    <p><strong>Academic Year:</strong> <span class="underline">${payment.academicYear}</span></p>
+                    <p><strong>Date of Payment:</strong> <span class="underline">${payment.dateOfPayment}</span></p>
+                    <p><strong>Description:</strong> <span class="underline">${payment.description}</span></p>
                     <div class="signature">
-                      <p>Signed:<span class="underline"></span></p>
+                      <p>Signed:<span class="signature-line"></span></p>
                       <p><strong>Business Manager</strong></p>
                     </div>
                   </div>
