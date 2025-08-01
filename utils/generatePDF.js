@@ -447,7 +447,7 @@ const generatePdf = async (reportCardData) => {
         </div>
 
         <p style="text-align: center; margin-top: 10mm;">
-          Date: <span class="underline"></span>
+          Date: <span class="underline">________</span>
         </p>
         <p class="note"><strong>NOTE:</strong> Any erasure on this card makes it invalid</p>
       </div>
@@ -473,7 +473,7 @@ const generatePdf = async (reportCardData) => {
       <div class="semester-info" style="text-align: center; margin-bottom: 5px;">
         <h3 style="margin: 0; font-size: 12px;">
           Academic Year: <span>${grades[0]?.academicYear || '2024-2025'}</span> |
-          Semester: <span>${grades[0]?.term === '1' ? '1st' : '2nd'}</span>
+          
         </h3>
       </div>
 
