@@ -36,21 +36,10 @@ app.use('/api/tvet-financial', require('./routes/tvetFinancialReport'));
 app.use(express.static(path.join(__dirname, 'client', 'dist')));
 
 // //  For all other routes, return React index.html (for React Router)
-app.get('*', (req, res) => {
-  const indexPath = path.join(__dirname, 'client', 'dist', 'index.html');
-  
-  // Check if file exists
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    // File doesn't exist, send a fallback response
-    res.status(404).json({ 
-      error: 'Frontend not built',
-      message: 'The React app has not been built yet',
-      path: indexPath
-    });
-  }
-});
+  // Handle React routing, return all requests to React app
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client', 'dist', 'index.html'));
+  });
 // Use Railway PORT or fallback to 5000
 const PORT = process.env.PORT || 5000;
 
