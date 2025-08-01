@@ -10,8 +10,8 @@ ConnectDB();
 // Middleware
 app.use(express.json({ extended: false }));
 
-// API welcome route
-app.get('/', (req, res) => res.json({ msg: 'Welcome to the School Management API' }));
+// API welcome route - moved to /api/
+app.get('/api/', (req, res) => res.json({ msg: 'Welcome to the School Management API' }));
 
 // Define API Routes
 app.use('/api/auth', require('./routes/auth'));
