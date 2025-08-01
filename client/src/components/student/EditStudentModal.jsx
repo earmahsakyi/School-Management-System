@@ -850,7 +850,6 @@ const removeUploadedPhoto = () => {
                   id="guardianEmail"
                   type="email"
                   {...register('guardianEmail', { 
-                    required: 'Guardian email is required',
                     pattern: {
                       value: /^\S+@\S+$/i,
                       message: 'Invalid email address'
@@ -858,9 +857,7 @@ const removeUploadedPhoto = () => {
                   })}
                   placeholder="parent@example.com"
                 />
-                {errors.guardianEmail && (
-                  <p className="text-sm text-destructive">{errors.guardianEmail.message}</p>
-                )}
+              
               </div>
               
               <div className="space-y-2">

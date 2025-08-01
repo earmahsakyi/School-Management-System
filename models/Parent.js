@@ -16,15 +16,21 @@ const parentSchema = new mongoose.Schema({
     required: [true, "Occupation  is required"],
     trim: true
   },
- email: {
-    type: String, 
-    validate: {
-      validator: function(v) {
-        return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-      },
-      message: 'Please enter a valid email address'
-    }
+email: {
+  type: String,
+  unique: true,
+  sparse: true,
+  set: function(v) {
+    // Convert null, empty string, or undefined to undefined
+    return (v === null || v === '' || v === undefined) ? undefined : v;
   },
+  validate: {
+    validator: function(v) {
+      return !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    },
+    message: 'Please enter a valid email address'
+  }
+},
   students: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Student'
@@ -35,14 +41,6 @@ const parentSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-parentSchema.index(
-  { email: 1 }, 
-  { 
-    unique: true, 
-    partialFilterExpression: { 
-      email: { $exists: true, $ne: null, $ne: "" } 
-    } 
-  }
-);
+
 
 module.exports = mongoose.model('Parent', parentSchema);
