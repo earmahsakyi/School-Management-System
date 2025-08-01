@@ -12,7 +12,7 @@ import { loadUser } from '@/actions/authAction';
 
 const EditAdminProfileModal = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
-  const API_BASE_URL = 'http://localhost:5000';
+
   const { loading, error, profile } = useSelector((state) => state.admin);
   
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -45,7 +45,7 @@ const EditAdminProfileModal = ({ isOpen, onClose }) => {
 
       // Set existing photo preview if available
       if (profile.photo) {
-        const photoUrl = `${API_BASE_URL}/uploads/admins/${profile.photo.split(/[\\/]/).pop()}`;
+        const photoUrl = profile.photo;
         setPhotoPreview(photoUrl);
       } else {
         setPhotoPreview(null);
