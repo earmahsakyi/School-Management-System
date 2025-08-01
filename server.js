@@ -62,7 +62,7 @@ console.log('✓ Static file serving configured');
 
 // Catch all handler: send back React's index.html file for any non-API routes
 console.log('Setting up catch-all route...');
-app.get('*', (req, res) => {
+app.get('/*', (req, res) => {
   const indexPath = path.join(__dirname, 'client', 'dist', 'index.html');
   console.log(`Serving index.html from: ${indexPath}`);
   res.sendFile(indexPath);
