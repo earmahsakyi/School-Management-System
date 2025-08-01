@@ -437,7 +437,7 @@ const generatePdf = async (reportCardData) => {
 
         <div class="signatures-section">
           <div class="signature-box">
-            <div class="signature-line"></div>
+            <div class="signature-line" style="margin-top: 10mm;"></div>
             <p><strong>REGISTRAR</strong></p>
           </div>
           <div class="signature-box">
@@ -447,7 +447,7 @@ const generatePdf = async (reportCardData) => {
         </div>
 
         <p style="text-align: center; margin-top: 10mm;">
-          Date: <span class="underline">________</span>
+          Date: <span >__________________</span>
         </p>
         <p class="note"><strong>NOTE:</strong> Any erasure on this card makes it invalid</p>
       </div>
