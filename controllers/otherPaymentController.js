@@ -2,16 +2,16 @@ const OtherPayment = require('../models/OtherPayment');
 const Student = require('../models/Student'); 
 const { generateReceiptPdf, generateBatchReceiptsPdf } = require('../utils/OtherPayment');
 
-// Create payment (no PDF generation)
+// Create payment (with PDF generation for single receipt)
 exports.createPayment = async (req, res) => {
   try {
-    const { studentId, amount, bankDepositNumber, academicYear, description, paymentOf, dateOfPayment } = req.body;
+    const { studentId, amount, bankDepositNumber, academicYear, description, paymentOf, dateOfPayment, manualStudentDetails } = req.body;
 
     // Enhanced validation
-    if (!studentId || !amount || !academicYear || !paymentOf) {
+    if (!amount || !academicYear || !paymentOf) {
       return res.status(400).json({ 
         success: false,
-        message: 'Missing required payment fields: studentId, amount, academicYear, paymentOf' 
+        message: 'Missing required payment fields: amount, academicYear, paymentOf' 
       });
     }
 
@@ -22,11 +22,42 @@ exports.createPayment = async (req, res) => {
       });
     }
 
-    const student = await Student.findById(studentId);
-    if (!student) {
-      return res.status(404).json({ 
+    let studentData;
+    if (studentId) {
+      const student = await Student.findById(studentId);
+      if (!student) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'Student not found.' 
+        });
+      }
+      studentData = {
+        firstName: student.firstName,
+        lastName: student.lastName,
+        middleName: student.middleName || '-',
+        admissionNumber: student.admissionNumber,
+        gradeLevel: student.gradeLevel,
+        department: student.department
+      };
+    } else if (manualStudentDetails) {
+      if (!manualStudentDetails.firstName || !manualStudentDetails.lastName) {
+        return res.status(400).json({
+          success: false,
+          message: 'First name and last name are required for manual student details'
+        });
+      }
+      studentData = {
+        firstName: manualStudentDetails.firstName.trim() || '-',
+        lastName: manualStudentDetails.lastName.trim() || '-',
+        middleName: manualStudentDetails.middleName.trim() || '-',
+        admissionNumber: manualStudentDetails.admissionNumber.trim() || '-',
+        gradeLevel: manualStudentDetails.gradeLevel.trim() || '-',
+        department: manualStudentDetails.department.trim() || '-'
+      };
+    } else {
+      return res.status(400).json({ 
         success: false,
-        message: 'Student not found.' 
+        message: 'Either studentId or manual student details must be provided' 
       });
     }
 
@@ -36,23 +67,36 @@ exports.createPayment = async (req, res) => {
     const receiptNumber = `REC-${timestamp}-${randomNum}`;
 
     const newPayment = new OtherPayment({
-      student: studentId,
+      student: studentId || null,
       amount: parseFloat(amount),
       dateOfPayment: dateOfPayment ? new Date(dateOfPayment) : new Date(),
       receiptNumber,
       bankDepositNumber: bankDepositNumber || '',
       paymentOf: paymentOf.trim(),
       description: description || 'Other Payment',
-      academicYear: academicYear.trim()
+      academicYear: academicYear.trim(),
+      manualStudentDetails: studentId ? null : studentData
     });
 
     await newPayment.save();
 
-    res.json({
-      success: true,
-      message: 'Payment created successfully',
-      payment: newPayment
+    // Generate the PDF receipt
+    const pdfBuffer = await generateReceiptPdf({
+      student: studentData,
+      payment: {
+        receiptNumber: newPayment.receiptNumber,
+        bankDepositNumber: newPayment.bankDepositNumber,
+        paymentOf: newPayment.paymentOf,
+        amount: newPayment.amount,
+        dateOfPayment: newPayment.dateOfPayment.toLocaleDateString(),
+        description: newPayment.description,
+        academicYear: newPayment.academicYear
+      },
     });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=receipt-${newPayment.receiptNumber}.pdf`);
+    res.send(pdfBuffer);
 
   } catch (error) {
     console.error('Error creating payment:', error);
@@ -110,10 +154,7 @@ exports.generateBatchReceipts = async (req, res) => {
       if (student) {
         filter.student = student._id;
       } else {
-        return res.status(404).json({
-          success: false,
-          message: 'No student found with the provided admission number'
-        });
+        filter['manualStudentDetails.admissionNumber'] = { $regex: admissionNumber, $options: 'i' };
       }
     }
 
@@ -128,7 +169,21 @@ exports.generateBatchReceipts = async (req, res) => {
       });
     }
 
-    const pdfBuffer = await generateBatchReceiptsPdf(payments);
+    // Prepare payment data for PDF generation
+    const paymentData = payments.map(payment => ({
+      student: payment.student || payment.manualStudentDetails,
+      payment: {
+        receiptNumber: payment.receiptNumber,
+        bankDepositNumber: payment.bankDepositNumber,
+        paymentOf: payment.paymentOf,
+        amount: payment.amount,
+        dateOfPayment: payment.dateOfPayment.toLocaleDateString(),
+        description: payment.description,
+        academicYear: payment.academicYear
+      }
+    }));
+
+    const pdfBuffer = await generateBatchReceiptsPdf(paymentData);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=batch-receipts-${new Date().getTime()}.pdf`);
@@ -188,17 +243,7 @@ exports.getAllPayments = async (req, res) => {
       if (student) {
         filter.student = student._id;
       } else {
-        return res.json({
-          success: true,
-          payments: [],
-          pagination: {
-            current: pageNum,
-            pages: 0,
-            total: 0,
-            hasNext: false,
-            hasPrev: false
-          }
-        });
+        filter['manualStudentDetails.admissionNumber'] = { $regex: admissionNumber, $options: 'i' };
       }
     }
 
@@ -213,9 +258,15 @@ exports.getAllPayments = async (req, res) => {
 
     const totalPages = Math.ceil(total / limitNum);
 
+    // Enhance payments response to include manual student details if no student is populated
+    const enhancedPayments = payments.map(payment => ({
+      ...payment.toObject(),
+      student: payment.student || payment.manualStudentDetails
+    }));
+
     res.json({
       success: true,
-      payments,
+      payments: enhancedPayments,
       pagination: {
         current: pageNum,
         pages: totalPages,
@@ -250,9 +301,15 @@ exports.getPaymentById = async (req, res) => {
       });
     }
 
+    // Include manual student details if no student is populated
+    const enhancedPayment = {
+      ...payment.toObject(),
+      student: payment.student || payment.manualStudentDetails
+    };
+
     res.json({
       success: true,
-      payment
+      payment: enhancedPayment
     });
 
   } catch (error) {
@@ -269,7 +326,7 @@ exports.getPaymentById = async (req, res) => {
 exports.updatePayment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { amount, bankDepositNumber, description, academicYear, paymentOf } = req.body;
+    const { amount, bankDepositNumber, description, academicYear, paymentOf, manualStudentDetails } = req.body;
 
     const payment = await OtherPayment.findById(id);
     if (!payment) {
@@ -306,15 +363,37 @@ exports.updatePayment = async (req, res) => {
       payment.paymentOf = paymentOf.trim();
     }
 
+    if (manualStudentDetails && !payment.student) {
+      if (!manualStudentDetails.firstName || !manualStudentDetails.lastName) {
+        return res.status(400).json({
+          success: false,
+          message: 'First name and last name are required for manual student details'
+        });
+      }
+      payment.manualStudentDetails = {
+        firstName: manualStudentDetails.firstName.trim() || '-',
+        lastName: manualStudentDetails.lastName.trim() || '-',
+        middleName: manualStudentDetails.middleName.trim() || '-',
+        admissionNumber: manualStudentDetails.admissionNumber.trim() || '-',
+        gradeLevel: manualStudentDetails.gradeLevel.trim() || '-',
+        department: manualStudentDetails.department.trim() || '-'
+      };
+    }
+
     await payment.save();
 
     const updatedPayment = await OtherPayment.findById(id)
       .populate('student', 'firstName lastName middleName admissionNumber gradeLevel classSection department');
 
+    const enhancedUpdatedPayment = {
+      ...updatedPayment.toObject(),
+      student: updatedPayment.student || updatedPayment.manualStudentDetails
+    };
+
     res.json({
       success: true,
       message: 'Payment updated successfully',
-      payment: updatedPayment
+      payment: enhancedUpdatedPayment
     });
 
   } catch (error) {
@@ -385,13 +464,19 @@ exports.getPaymentStats = async (req, res) => {
         .limit(5)
     ]);
 
+    // Enhance recent payments to include manual student details
+    const enhancedRecentPayments = recentPayments.map(payment => ({
+      ...payment.toObject(),
+      student: payment.student || payment.manualStudentDetails
+    }));
+
     res.json({
       success: true,
       stats: {
         totalPayments,
         totalAmount: totalAmount[0]?.total || 0,
         averageAmount: avgAmount[0]?.avg || 0,
-        recentPayments
+        recentPayments: enhancedRecentPayments
       }
     });
 

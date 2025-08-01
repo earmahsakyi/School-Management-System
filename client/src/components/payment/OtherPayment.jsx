@@ -973,21 +973,6 @@ export default function PaymentsPage() {
                                   <Button 
                                     variant="ghost" 
                                     size="icon" 
-                                    onClick={() => downloadReceipt(payment)} 
-                                    disabled={loading}
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Download Receipt</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
                                     onClick={() => handleEdit(payment)} 
                                     disabled={loading}
                                   >

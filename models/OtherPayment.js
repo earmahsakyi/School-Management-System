@@ -1,11 +1,10 @@
-// models/Payment.js
 const mongoose = require('mongoose');
 
 const paymentOtherSchema = new mongoose.Schema({
   student: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Student',
-    required: true,
+    required: false, // Made optional to allow manual entries
   },
   amount: {
     type: Number,
@@ -21,26 +20,45 @@ const paymentOtherSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
-  bankDepositNumber: { 
+  bankDepositNumber: {
     type: String,
     trim: true,
     default: ''
   },
-  paymentOf: { 
+  paymentOf: {
     type: String,
     trim: true,
-    default: '' 
+    default: ''
   },
   description: {
     type: String,
     trim: true,
-    default: 'Academic Payment' 
+    default: 'Academic Payment'
   },
   academicYear: {
     type: String,
     required: true,
     trim: true
+  },
+  manualStudentDetails: {
+    type: {
+      firstName: { type: String, trim: true, default: '-' },
+      lastName: { type: String, trim: true, default: '-' },
+      middleName: { type: String, trim: true, default: '-' },
+      admissionNumber: { type: String, trim: true, default: '-' },
+      gradeLevel: { type: String, trim: true, default: '-' },
+      department: { type: String, trim: true, default: '-' }
+    },
+    required: false // Only required if student field is null
   }
 }, { timestamps: true });
+
+// Ensure at least one of student or manualStudentDetails is provided
+paymentOtherSchema.pre('save', function(next) {
+  if (!this.student && !this.manualStudentDetails) {
+    return next(new Error('Either student or manualStudentDetails must be provided'));
+  }
+  next();
+});
 
 module.exports = mongoose.model('OtherPayment', paymentOtherSchema);

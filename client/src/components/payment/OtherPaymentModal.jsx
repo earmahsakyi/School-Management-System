@@ -12,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getAllStudents } from '@/actions/studentAction';
 import { toast } from 'react-hot-toast';
@@ -23,19 +24,26 @@ const OtherPaymentModal = ({ open, onOpenChange, onSuccess }) => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentSearch, setStudentSearch] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [useManualEntry, setUseManualEntry] = useState(false);
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
-    defaultValues: {
+    efaultValues: {
       studentId: '',
       amount: '',
       bankDepositNumber: '',
       academicYear: '',
       description: 'Other Payment',
-      paymentOf:''
+      paymentOf: '',
+      firstName: '',
+      lastName: '',
+      middleName: '',
+      admissionNumber: '',
+      gradeLevel: '',
+      department: '',
+      dateOfPayment: ''
     }
   });
-
-  // Filter students based on search input
+// Filter students based on search input
   const filteredStudents = students.filter(student =>
     student.firstName.toLowerCase().includes(studentSearch.toLowerCase()) ||
     student.lastName.toLowerCase().includes(studentSearch.toLowerCase()) ||
@@ -46,13 +54,19 @@ const OtherPaymentModal = ({ open, onOpenChange, onSuccess }) => {
   const handleStudentSelect = useCallback((student) => {
     setSelectedStudent(student);
     setValue('studentId', student._id);
+    setValue('firstName', student.firstName);
+    setValue('lastName', student.lastName);
+    setValue('middleName', student.middleName || '');
+    setValue('admissionNumber', student.admissionNumber);
+    setValue('gradeLevel', student.gradeLevel);
+    setValue('department', student.department);
   }, [setValue]);
 
   // Handle form submission
   const onSubmit = async (data) => {
     try {
-      if (!selectedStudent) {
-        toast.error("Please select a student.");
+      if (!useManualEntry && !selectedStudent) {
+        toast.error("Please select a student or enter manual details.");
         return;
       }
 
@@ -73,13 +87,21 @@ const OtherPaymentModal = ({ open, onOpenChange, onSuccess }) => {
       setIsSubmitting(true);
 
       const payload = {
-        studentId: data.studentId,
+        studentId: data.studentId || null,
         amount: parseFloat(data.amount),
         bankDepositNumber: data.bankDepositNumber.trim(),
         academicYear: data.academicYear,
         paymentOf: data.paymentOf,
         dateOfPayment: data.dateOfPayment,
-        description: data.description.trim() || 'Other Payment'
+        description: data.description.trim() || 'Other Payment',
+        manualStudentDetails: useManualEntry ? {
+          firstName: data.firstName.trim() || '-',
+          lastName: data.lastName.trim() || '-',
+          middleName: data.middleName.trim() || '-',
+          admissionNumber: data.admissionNumber.trim() || '-',
+          gradeLevel: data.gradeLevel.trim() || '-',
+          department: data.department.trim() || '-'
+        } : null
       };
 
       // Make API call to create payment and generate receipt
@@ -95,6 +117,18 @@ const OtherPaymentModal = ({ open, onOpenChange, onSuccess }) => {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to create payment');
       }
+
+      // Handle PDF download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `receipt-${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
 
       toast.success("Payment recorded successfully and receipt downloaded!");
       onSuccess();
@@ -118,10 +152,18 @@ const OtherPaymentModal = ({ open, onOpenChange, onSuccess }) => {
       bankDepositNumber: '',
       paymentOf: '',
       academicYear: '',
-      description: 'Academic Payment'
+      description: 'Academic Payment',
+      firstName: '',
+      lastName: '',
+      middleName: '',
+      admissionNumber: '',
+      gradeLevel: '',
+      department: '',
+      dateOfPayment: ''
     });
     setSelectedStudent(null);
     setStudentSearch('');
+    setUseManualEntry(false);
   };
 
   // Reset form when modal closes
@@ -163,83 +205,166 @@ const OtherPaymentModal = ({ open, onOpenChange, onSuccess }) => {
 
         <ScrollArea className="flex-grow min-h-0 pr-4">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Student Selection */}
+            {/* Student Selection Toggle */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={useManualEntry}
+                onCheckedChange={(checked) => {
+                  setUseManualEntry(checked);
+                  if (checked) {
+                    setSelectedStudent(null);
+                    setValue('studentId', '');
+                  }
+                }}
+                disabled={isSubmitting}
+              />
+              <Label>Enter student details manually</Label>
+            </div>
+
+            {/* Student Selection or Manual Entry */}
             <Card>
               <CardContent className="pt-6 space-y-4">
-                <Label htmlFor="student-search" className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Select Student *
-                </Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="student-search"
-                    placeholder="Search by name or admission number..."
-                    value={studentSearch}
-                    onChange={(e) => setStudentSearch(e.target.value)}
-                    className="pl-10"
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                {selectedStudent ? (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="p-4 border rounded-lg bg-muted/50 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium">{selectedStudent.firstName} {selectedStudent.lastName} {selectedStudent.middleName || ''} </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedStudent.admissionNumber} - Grade {selectedStudent.gradeLevel}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Department: {selectedStudent.department}
-                        </p>
-                      </div>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => {
-                          setSelectedStudent(null);
-                          setValue('studentId', '');
-                        }} 
+                {useManualEntry ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name *</Label>
+                      <Input
+                        id="firstName"
+                        placeholder="Enter first name"
+                        {...register("firstName", { required: "First name is required" })}
                         disabled={isSubmitting}
-                      >
-                        Change
-                      </Button>
+                      />
+                      {errors.firstName && (
+                        <p className="text-red-500 text-sm">{errors.firstName.message}</p>
+                      )}
                     </div>
-                  </motion.div>
-                ) : (
-                  <div className="grid gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
-                    {filteredStudents.length > 0 ? (
-                      filteredStudents.map(student => (
-                        <motion.div
-                          key={student._id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => handleStudentSelect(student)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="font-medium">{student.firstName} {student.lastName}  {selectedStudent?.middleName || '' }</h4>
-                              <p className="text-sm text-muted-foreground">{student.admissionNumber}</p>
-                            </div>
-                            <Badge variant="outline">
-                              Grade {student.gradeLevel} - {student.department}
-                            </Badge>
-                          </div>
-                        </motion.div>
-                      ))
-                    ) : (
-                      <p className="text-center text-muted-foreground py-4">
-                        {studentSearch ? 'No students found matching your search.' : 'Start typing to search for students.'}
-                      </p>
-                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name *</Label>
+                      <Input
+                        id="lastName"
+                        placeholder="Enter last name"
+                        {...register("lastName", { required: "Last name is required" })}
+                        disabled={isSubmitting}
+                      />
+                      {errors.lastName && (
+                        <p className="text-red-500 text-sm">{errors.lastName.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="middleName">Middle Name</Label>
+                      <Input
+                        id="middleName"
+                        placeholder="Enter middle name (optional)"
+                        {...register("middleName")}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="admissionNumber">Admission Number</Label>
+                      <Input
+                        id="admissionNumber"
+                        placeholder="Enter admission number (optional)"
+                        {...register("admissionNumber")}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="gradeLevel">Grade Level</Label>
+                      <Input
+                        id="gradeLevel"
+                        placeholder="Enter grade level (optional)"
+                        {...register("gradeLevel")}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="department">Department</Label>
+                      <Input
+                        id="department"
+                        placeholder="Enter department (optional)"
+                        {...register("department")}
+                        disabled={isSubmitting}
+                      />
+                    </div>
                   </div>
+                ) : (
+                  <>
+                    <Label htmlFor="student-search" className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Select Student *
+                    </Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="student-search"
+                        placeholder="Search by name or admission number..."
+                        value={studentSearch}
+                        onChange={(e) => setStudentSearch(e.target.value)}
+                        className="pl-10"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+
+                    {selectedStudent ? (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="p-4 border rounded-lg bg-muted/50 shadow-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-medium">{selectedStudent.firstName} {selectedStudent.lastName} {selectedStudent.middleName || ''}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {selectedStudent.admissionNumber} - Grade {selectedStudent.gradeLevel}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Department: {selectedStudent.department}
+                            </p>
+                          </div>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              setSelectedStudent(null);
+                              setValue('studentId', '');
+                            }} 
+                            disabled={isSubmitting}
+                          >
+                            Change
+                          </Button>
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <div className="grid gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
+                        {filteredStudents.length > 0 ? (
+                          filteredStudents.map(student => (
+                            <motion.div
+                              key={student._id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                              onClick={() => handleStudentSelect(student)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className="font-medium">{student.firstName} {student.lastName} {student.middleName || ''}</h4>
+                                  <p className="text-sm text-muted-foreground">{student.admissionNumber}</p>
+                                </div>
+                                <Badge variant="outline">
+                                  Grade {student.gradeLevel} - {student.department}
+                                </Badge>
+                              </div>
+                            </motion.div>
+                          ))
+                        ) : (
+                          <p className="text-center text-muted-foreground py-4">
+                            {studentSearch ? 'No students found matching your search.' : 'Start typing to search for students.'}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -318,32 +443,36 @@ const OtherPaymentModal = ({ open, onOpenChange, onSuccess }) => {
               </p>
             </div>
 
-              <div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="paymentOf">
-                Payment Of :
+                Payment Of *
               </Label>
               <Input
                 id="paymentOf"
                 placeholder="i.e Track Suit"
-                {...register("paymentOf")}
+                {...register("paymentOf", { required: "Payment description is required" })}
                 disabled={isSubmitting}
               />
+              {errors.paymentOf && (
+                <p className="text-red-500 text-sm">{errors.paymentOf.message}</p>
+              )}
               <p className="text-xs text-muted-foreground">
-                Other payments 
+                Other payments
               </p>
             </div>
-              <div className="space-y-2">
-                <Label htmlFor="dateOfPayment">Date of Payment</Label>
-                <Input
-                  id="dob"
-                  type="date"
-                  {...register('dateOfPayment', { required: 'Date of Payment is required' })}
-                />
-                {errors.dateOfPayment && (
-                  <p className="text-sm text-destructive">{errors.dateOfPayment.message}</p>
-                )}
-              </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="dateOfPayment">Date of Payment</Label>
+              <Input
+                id="dateOfPayment"
+                type="date"
+                {...register('dateOfPayment', { required: 'Date of Payment is required' })}
+                disabled={isSubmitting}
+              />
+              {errors.dateOfPayment && (
+                <p className="text-sm text-destructive">{errors.dateOfPayment.message}</p>
+              )}
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="description" className="flex items-center gap-2">
@@ -363,7 +492,7 @@ const OtherPaymentModal = ({ open, onOpenChange, onSuccess }) => {
             </div>
 
             {/* Payment Summary */}
-            {selectedStudent && watchedAmount && (
+            {(selectedStudent || useManualEntry) && watchedAmount && (
               <Card className="bg-muted/30">
                 <CardContent className="pt-6">
                   <h4 className="font-semibold mb-3 flex items-center gap-2">
@@ -374,12 +503,16 @@ const OtherPaymentModal = ({ open, onOpenChange, onSuccess }) => {
                     <div>
                       <p className="text-muted-foreground">Student:</p>
                       <p className="font-medium">
-                        {selectedStudent.firstName} {selectedStudent.lastName} {selectedStudent.middleName}
+                        {useManualEntry
+                          ? `${watch('firstName') || '-'} ${watch('lastName') || '-'} ${watch('middleName') || ''}`
+                          : `${selectedStudent.firstName} ${selectedStudent.lastName} ${selectedStudent.middleName || ''}`}
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Admission Number:</p>
-                      <p className="font-medium">{selectedStudent.admissionNumber}</p>
+                      <p className="font-medium">
+                        {useManualEntry ? watch('admissionNumber') || '-' : selectedStudent.admissionNumber}
+                      </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Academic Year:</p>
@@ -412,7 +545,7 @@ const OtherPaymentModal = ({ open, onOpenChange, onSuccess }) => {
               <TooltipTrigger asChild>
                 <Button 
                   onClick={handleSubmit(onSubmit)} 
-                  disabled={isSubmitting || !selectedStudent || !watchedAmount}
+                  disabled={isSubmitting || (!selectedStudent && !useManualEntry) || !watchedAmount}
                   className="gap-2"
                 >
                   {isSubmitting ? (
