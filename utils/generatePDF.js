@@ -441,7 +441,7 @@ const generatePdf = async (reportCardData) => {
             <p><strong>REGISTRAR</strong></p>
           </div>
           <div class="signature-box">
-            <div class="signature-line"></div>
+            <div class="signature-line" style="margin-top: 10mm;"></div>
             <p><strong>PRINCIPAL</strong></p>
           </div>
         </div>
