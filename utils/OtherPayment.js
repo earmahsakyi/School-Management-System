@@ -464,8 +464,8 @@ const generateBatchReceiptsPdf = async (payments) => {
                     <p><strong>Date of Payment:</strong> <span class="underline">${payment.dateOfPayment}</span></p>
                     <p><strong>Description:</strong> <span class="underline">${payment.description}</span></p>
                     <div >
-                      <p><strong>Signed:</strong> <span>_____________________________________</span></p>
-                     <p style="text-align: center; margin-left:-20rem;"><strong>Business Manager</strong></p>
+                      <p style=" margin-top:10px"><strong>Signed:</strong> <span>_____________________________________</span></p>
+                     <p style="text-align: center; margin-left:10px;"><strong>Business Manager</strong></p>
                     </div>
                   </div>
                 </div>
