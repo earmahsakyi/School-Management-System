@@ -277,7 +277,9 @@ body {
         </div>
         <img src="data:image/png;base64,${logo2Base64}" class="seal-img" alt="Right Seal" />
       </div>
-      <h2 class="document-title">CERTIFICATION OF TRANSFER AND ACADEMIC TRANSCRIPT</h2>
+     <h2 class="document-title">
+  ${student.promotionStatus === 'Graduated' ? 'GRADUATION CERTIFICATE AND TRANSCRIPT' : 'CERTIFICATION OF TRANSFER AND ACADEMIC TRANSCRIPT'}
+    </h2>
     </div>
 
     <div class="date-section">
@@ -295,8 +297,12 @@ body {
       <h3>Transfer Information</h3>
       <p><strong>Reason(s) for Transfer:</strong> <span class="underline" style="min-width: 300px;"></span></p>
       <p><strong>School Transferring To:</strong> <span class="underline" style="min-width: 300px;"></span></p>
-      <p><strong>Promoted to Grade:</strong> <span class="underline">${promotedToGrade}</span>
-         <strong>or Required to Repeat Grade:</strong> <span class="underline">${repeatGrade}</span></p>
+      ${student.promotionStatus === 'Graduated' ? `
+     <p><strong>Status:</strong> <span class="underline">Graduated</span></p>
+    ` : `
+   <p><strong>Promoted to Grade:</strong> <span class="underline">${promotedToGrade}</span>
+     <strong>or Required to Repeat Grade:</strong> <span class="underline">${repeatGrade}</span></p>
+    `}
       <div style="margin-top: 10px;">
         <p><strong>Remarks:</strong></p>
         <p>1. <strong>Conduct:</strong> <span class="underline">${mostRecentConduct}</span></p>
@@ -333,6 +339,11 @@ body {
     <div class="footer">
       <p class="motto">MOTTO: STRIVING FOR POSTERITY</p>
     </div>
+    ${student.promotionStatus === 'Graduated' ? `
+  <p style="font-size: 11pt; text-align: center; margin-top: 10mm;">
+    This certifies that the student has fulfilled all academic requirements for graduation from Voinjama Multilateral High School.
+  </p>
+` : ''}
   </div>
 </body>
 </html>`;

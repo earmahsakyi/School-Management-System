@@ -21,6 +21,7 @@ const generateRecommendationPdf = async (student, recommendationData = {}) => {
       otherActivities = '',
       remarks = ''
     } = recommendationData;
+    const studentStatus = student.promotionStatus === 'Graduated' ? 'graduate' : 'student';
 
     // Helper function to create checked/unchecked checkboxes
     const createCheckbox = (name, isChecked = false) => {
@@ -208,7 +209,7 @@ body {
 
     <div class="student-info">
       <p><strong>This is to introduce the bearer</strong> <span class="underline"> ${student.lastName} ${student.firstName} ${student?.middleName || ''}</span></p>
-      <p>as a bona fide graduate of Voinjama Multilateral High School who now desires to</p>
+      <p>as a bona fide ${studentStatus} of Voinjama Multilateral High School who now desires to</p>
       <p><span class="filled-line">${purpose}</span></p>
       
       <div class="characteristics-section">

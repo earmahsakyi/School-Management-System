@@ -33,7 +33,11 @@ const promotionRecordSchema = new mongoose.Schema({
   notes: {
     type: String,
     default: ''
-  }
+  },
+  graduated: {
+  type: Boolean,
+  default: false
+}
 }, { timestamps: true });
 
 module.exports = mongoose.model('PromotionRecord', promotionRecordSchema);

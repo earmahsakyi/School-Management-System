@@ -76,7 +76,12 @@ exports.getTranscriptPdf = async (req, res) => {
     // Add promotedToGrade if not set
     if (!student.promotedToGrade) {
       const currentGrade = parseInt(student.gradeLevel);
-      student.promotedToGrade = currentGrade < 12 ? (currentGrade + 1).toString() : '12';
+      
+      if (student.promotionStatus === 'Graduated') {
+        student.promotedToGrade = 'Graduated';
+      } else {
+        student.promotedToGrade = currentGrade < 12 ? (currentGrade + 1).toString() : '12';
+      }
     }
 
     // Generate PDF with the correctly formatted data

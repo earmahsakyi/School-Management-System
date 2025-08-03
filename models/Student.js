@@ -80,11 +80,19 @@ const studentSchema = new mongoose.Schema({
   },
 promotionStatus: {
   type: String,
-  enum: ['Promoted', 'Not Promoted', 'Conditional Promotion', 'Asked Not to Enroll'],
+  enum: ['Promoted', 'Not Promoted', 'Conditional Promotion', 'Asked Not to Enroll','Graduated'],
   default: 'Not Promoted'
 },
 promotedToGrade: {
   type: String, // example: "9"
+  default: null
+},
+graduated: {
+  type: Boolean,
+  default: false
+},
+graduationDate: {
+  type: Date,
   default: null
 }
 

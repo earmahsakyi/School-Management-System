@@ -215,9 +215,31 @@ const processAutomaticPromotion = async (studentId, academicYear, promotedById) 
     const promotionDecision = determinePromotionStatus(subjectAverages);
 
     // Calculate next grade level
+    // const currentGrade = parseInt(student.gradeLevel);
+    // const nextGrade = currentGrade + 1;
+    // const promotedToGrade = nextGrade <= 12 ? nextGrade.toString() : null;
+
     const currentGrade = parseInt(student.gradeLevel);
-    const nextGrade = currentGrade + 1;
-    const promotedToGrade = nextGrade <= 12 ? nextGrade.toString() : null;
+let promotedToGrade = null;
+let graduated = false;
+
+if (currentGrade === 12 && promotionDecision.canPromote) {
+  // Graduation logic
+  student.graduated = true;
+  student.graduationDate = new Date();
+  student.promotedToGrade = null;
+  student.promotionStatus = 'Graduated';
+  graduated = true;
+} else {
+  promotedToGrade = promotionDecision.canPromote ? (currentGrade + 1).toString() : null;
+  student.promotedToGrade = promotedToGrade;
+  student.promotionStatus = promotionDecision.promotionStatus;
+
+  if (promotionDecision.canPromote && promotedToGrade) {
+    student.gradeLevel = promotedToGrade;
+  }
+}
+
 
     // Prepare promotion data
     const promotionData = {
@@ -250,24 +272,31 @@ const processAutomaticPromotion = async (studentId, academicYear, promotedById) 
       newGrade: promotedToGrade,
       promotionStatus: promotionDecision.promotionStatus,
       promotedBy: promotedById,
-      notes: `Automatic promotion based on yearly averages. ${promotionDecision.reason}. Overall yearly average: ${overallYearlyAverage}%. Failing subjects: ${promotionDecision.failingCount}.`
+      graduated: student.graduated,
+      notes: student.graduated
+    ? `Student graduated from Grade 12. Overall average: ${overallYearlyAverage}%`
+    : `Automatic promotion based on yearly averages. ${promotionDecision.reason}. Overall yearly average: ${overallYearlyAverage}%.`
     });
 
     return {
-      success: true,
-      message: `Student promotion processed successfully: ${promotionDecision.promotionStatus}`,
+        success: true,
+      message: graduated
+        ? 'Student has graduated from Grade 12.'
+        : `Student promotion processed successfully: ${promotionDecision.promotionStatus}`,
       data: {
         ...promotionData,
         promotionRecordId: promotionRecord._id,
         updatedStudent: {
           id: student._id,
-          firstName: `${student.firstName} `,
+          firstName: `${student.firstName}`,
           lastName: `${student.lastName}`,
           middleName: `${student.middleName || ''}`,
           admissionNumber: student.admissionNumber,
           currentGrade: student.gradeLevel,
           promotionStatus: student.promotionStatus,
-          promotedToGrade: student.promotedToGrade
+          promotedToGrade: student.promotedToGrade,
+          graduated: student.graduated,
+          graduationDate: student.graduationDate
         }
       }
     };

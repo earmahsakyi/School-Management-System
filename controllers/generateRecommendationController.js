@@ -58,7 +58,8 @@ const recommendationController = {
           firstName: student.firstName,
           lastName: student.lastName,
           admissionNumber: student.admissionNumber,
-          gradeLevel: student.gradeLevel
+          gradeLevel: student.gradeLevel,
+          
         }
       });
 

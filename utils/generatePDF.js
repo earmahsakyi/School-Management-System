@@ -38,13 +38,18 @@ const generatePdf = async (reportCardData) => {
       department = 'JHS';
       reportTitle = 'Junior High Report Card';
     } else if (gradeLevel >= 10 && gradeLevel <= 12) {
-      if (student.department === 'Arts' || student.department === 'Science') {
-        department = student.department;
-      } else {
-        department = 'General';
-      }
-      reportTitle = 'Senior High Report Card';
-    }
+  if (student.department === 'Arts' || student.department === 'Science') {
+    department = student.department;
+  } else {
+    department = 'General';
+  }
+
+  if (gradeLevel === 12 && student.promotionStatus === 'Graduated') {
+    reportTitle = 'Senior High School Graduation Report';
+  } else {
+    reportTitle = 'Senior High Report Card';
+  }
+}
 
     let subjectOrder = [];
     if (department === 'JHS') {
@@ -128,7 +133,9 @@ const generatePdf = async (reportCardData) => {
         promoted: status === 'Promoted' ? 'checked' : '',
         conditional: status === 'Conditional Promotion' ? 'checked' : '',
         repeat: status === 'Not Promoted' ? 'checked' : '',
-        notEnroll: status === 'Asked Not to Enroll' ? 'checked' : ''
+        notEnroll: status === 'Asked Not to Enroll' ? 'checked' : '',
+        graduated: status === 'Graduated' ? 'checked' : ''
+
       };
     };
     const checkboxes = getPromotionCheckboxes();
@@ -434,6 +441,8 @@ const generatePdf = async (reportCardData) => {
 
         <div><span class="checkbox ${checkboxes.repeat ? 'checked' : ''}"></span> C. Required to repeat the grade</div>
         <div><span class="checkbox ${checkboxes.notEnroll ? 'checked' : ''}"></span> D. Asked not to enroll next year</div>
+        <div><span class="checkbox ${checkboxes.graduated ? 'checked' : ''}"></span> E. Graduated</div>
+
 
         <div class="signatures-section">
           <div class="signature-box">
