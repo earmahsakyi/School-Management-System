@@ -38,7 +38,11 @@ const UserSchema = new mongoose.Schema({
     tokenVersion: {
         type: Number,
         default: 0
-    }
+    },
+    loginAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date, default: null },
+    lockLevel: { type: Number, default: 0 }, 
+    lockedManually: { type: Boolean, default: false },
 
 });
 module.exports = mongoose.model('User', UserSchema);

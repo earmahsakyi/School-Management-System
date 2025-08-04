@@ -32,45 +32,106 @@ exports.getLoginUser = async (req, res) => {
 //@route Post api/auth
 // desc Auth user & get token
 // //@access Priavte
+const MAX_ATTEMPTS = 3;
+
+const LOCK_DURATIONS = {
+  1: 30 * 60 * 1000,      // 30 minutes
+  2: 60 * 60 * 1000,      // 1 hour
+};
 exports.AuthUserToken = async (req, res) => {
+  const { email, password } = req.body;
 
-    const errors = validationResult(req);    
-    if(!errors.isEmpty()){
-        return res.status(400).json({ errors: errors.array()});
+
+  try {
+    let user = await User.findOne({ email });
+
+    if (!user || !user.isVerified) {
+      return res.status(400).json({ msg: 'Invalid credentials or email not verified' });
     }
-    const { email, password } = req.body;    
-    try{
-        let user = await User.findOne({ email });
-        if (!user || !user.isVerified) {
-             return res.status(400).json({ msg: 'Invalid credentials or email not verified ' });
-        }
 
-        const isMatch = await bcrypt.compare(password, user.password);
-        if(!isMatch){
-            return res.status(400).json({msg: 'Invalid Credentials'})
-        }
-        const payload = {
-            user: {
-                id: user.id,
-                role: user.role,
-                profileUpdated: user.profileUpdated
-                
-            }
-        }
-        jwt.sign(payload, process.env.jwtSecret, {
-            expiresIn: '1d'
-        },
-        (err, token) => {
-            if(err) throw err;
-            res.json({ token, role: user.role, userID: user.id, profileUpdated: user.profileUpdated})
-        }
-    )
-    }catch(err){
-        console.error(err.message);
-        res.status(500).json({ msg: 'Server Error'})
-
+    // Check manual lock
+    if (user.lockedManually) {
+      return res.status(423).json({ msg: 'Account locked by admin. Contact school office to unlock.' });
     }
-}
+
+    // Check timed lock
+    if (user.lockUntil && user.lockUntil > Date.now()) {
+      const wait = Math.ceil((user.lockUntil - Date.now()) / 60000);
+      return res.status(423).json({ msg: `Account locked. Try again in ${wait} minute(s).` });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      user.loginAttempts += 1;
+
+      if (user.loginAttempts >= MAX_ATTEMPTS) {
+        user.lockLevel += 1;
+
+        if (user.lockLevel >= 3) {
+          user.lockedManually = true;
+          const html = `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+    <h2 style="color: #D32F2F;">Account Locked</h2>
+    <p>Hello,</p>
+    <p>We noticed multiple unsuccessful login attempts on your account associated with this email address.</p>
+    <p><strong>As a result, your account has been temporarily locked for security reasons.</strong></p>
+
+    <p>If you believe this was a mistake or you require urgent access, please contact the school administration to have your account reviewed and unlocked.</p>
+
+    <div style="background-color: #fce4ec; padding: 10px; border-left: 4px solid #d50000; margin: 20px 0;">
+      <strong>Status:</strong> Locked after too many failed attempts<br>
+      <strong>Next step:</strong> Contact admin or wait if this is your 1st or 2nd lock.
+    </div>
+
+    <p>If this activity was not initiated by you, we recommend resetting your password after regaining access.</p>
+
+    <p style="margin-top: 30px;">Thank you,<br><strong>School Management System Team</strong></p>
+  </div>
+`;
+          //send mail to locked account
+          await sendEmail({
+      to: email,
+      subject: 'Account Locked',
+      html,
+          })
+
+        } else {
+          user.lockUntil = Date.now() + LOCK_DURATIONS[user.lockLevel];
+        }
+
+        await user.save();
+        return res.status(400).json({ msg: 'Too many failed attempts. Account is temporarily locked.' });
+      }
+
+      await user.save();
+      return res.status(400).json({ msg: 'Invalid Credentials' });
+    }
+
+    // Successful login
+    user.loginAttempts = 0;
+    user.lockLevel = 0;
+    user.lockUntil = null;
+    user.lockedManually = false;
+    await user.save();
+
+    // Generate token
+    const payload = {
+      user: {
+        id: user.id,
+        role: user.role,
+      },
+    };
+
+    jwt.sign(payload, process.env.jwtSecret, { expiresIn: '1d' }, (err, token) => {
+      if (err) throw err;
+      res.json({ token });
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
 
 // Register a user
 // access private

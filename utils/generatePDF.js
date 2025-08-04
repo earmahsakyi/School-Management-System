@@ -153,7 +153,7 @@ const generatePdf = async (reportCardData) => {
 
     const getOverallGradeClass = (average) => {
       const num = parseFloat(average);
-      if (isNaN(num)) return ''; // Handle NaN for overall average
+      if (isNaN(num)) return ''; 
       if (num >= 90) return 'grade-a';
       if (num >= 80) return 'grade-b';
       if (num >= 70) return 'grade-c';
@@ -174,7 +174,8 @@ const generatePdf = async (reportCardData) => {
           <td class="grade-cell ${getGradeClass(s['p2'])}">${s['p2']}</td>
           <td class="grade-cell ${getGradeClass(s['p3'])}">${s['p3']}</td>
           <td class="grade-cell ${getGradeClass(s['exam'])}">${s['exam']}</td>
-          <td class="grade-cell ${getGradeClass(s['average'])}">${s['average']}</td>
+         <td class="grade-cell ${getGradeClass(s['average'])}">${s['average'] !== '' ? Math.round(s['average']) : ''}</td>
+
         </tr>
       `;
     }).join('');
@@ -195,8 +196,8 @@ const generatePdf = async (reportCardData) => {
           <td class="grade-cell ${getGradeClass(s2['p5'])}">${s2['p5']}</td>
           <td class="grade-cell ${getGradeClass(s2['p6'])}">${s2['p6']}</td>
           <td class="grade-cell ${getGradeClass(s2['exam'])}">${s2['exam']}</td>
-          <td class="grade-cell ${getGradeClass(s2['average'])}">${s2['average']}</td>
-          <td class="grade-cell ${getGradeClass(yearlyAvg)}">${yearlyAvg}</td>
+          <td class="grade-cell ${getGradeClass(s2['average'])}">${s2['average'] !== '' ?  Math.round(s2['average']) : ''}</td>
+          <td class="grade-cell ${getGradeClass(yearlyAvg)}">${yearlyAvg !== '' ? Math.floor(parseFloat(yearlyAvg)) : ''}</td>
         </tr>
       `;
     }).join('');
@@ -288,9 +289,9 @@ const generatePdf = async (reportCardData) => {
     th, td {
       border: 1px solid #000;
       text-align: center; /* Common alignment */
-      padding: 4px;
+      padding: 5px;
       word-wrap: break-word; /* Ensure text wraps */
-      font-size: 11px; /* Consistent font size for table content */
+      font-size: 12px; /* Consistent font size for table content */
     }
 
     th {
@@ -299,7 +300,7 @@ const generatePdf = async (reportCardData) => {
     }
 
     .small-text {
-      font-size: 10pt;
+      font-size: 12pt;
     }
 
     .checkbox {
@@ -340,8 +341,8 @@ const generatePdf = async (reportCardData) => {
 
     .container-annual th,
     .container-annual td {
-      font-size: 9.5px; /* Slightly smaller for table readability on condensed page */
-      padding: 3px; /* Reduce padding in table cells */
+      font-size: 11px; /* Slightly smaller for table readability on condensed page */
+      padding: 4px; /* Reduce padding in table cells */
     }
 
 
@@ -400,10 +401,10 @@ const generatePdf = async (reportCardData) => {
 
 
     /* Grade specific colors - TEXT COLOR ONLY */
-    .grade-cell.grade-a { color: #006600; font-weight: bold; }
+    .grade-cell.grade-a { color: #0066cc; font-weight: bold; }
     .grade-cell.grade-b { color: #0066cc; font-weight: bold; }
-    .grade-cell.grade-c { color: #ff6600; font-weight: bold; }
-    .grade-cell.grade-d { color: #cc0000; font-weight: bold; }
+    .grade-cell.grade-c { color: #0066cc; font-weight: bold; }
+    .grade-cell.grade-d { color: #990000; font-weight: bold; }
     .grade-cell.grade-f { color: #990000; font-weight: bold; background-color: #ffe6e6; }
 
     /* Page break to separate the two reports */
@@ -468,7 +469,7 @@ const generatePdf = async (reportCardData) => {
           <img src="data:image/png;base64,${logo1Base64}" class="seal-img" alt="Left Seal" style="height: 50px; width: 50px;">
 
           <div class="header-text" style="text-align: center; flex: 1; padding: 0 5px;">
-            <h1 class="school-name" style="margin: 2px 0; font-size: 16px;">VOINJAMA MULTILATERAL HIGH SCHOOL</h1>
+            <h1 class="school-name" style="margin: 2px 0; font-size: 16px; color: maroon;">VOINJAMA MULTILATERAL HIGH SCHOOL</h1>
             <h4 class="ministry" style="margin: 2px 0;">VOINJAMA CITY, LOFA COUNTY</h4>
             <h4 class="ministry" style="margin: 2px 0;">REPUBLIC OF LIBERIA</h4>
             <p class="contact-info" style="margin: 2px 0;">📞 0776990187 / 0886962672</p>
@@ -489,14 +490,16 @@ const generatePdf = async (reportCardData) => {
       <div class="student-info" style="margin-bottom: 5px;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <div>
-            <p style="margin: 2px 0;margin-left:10px;"><strong>Student:</strong> <span class="underline">${student.lastName} ${student.firstName} ${student?.middleName || ''}</span></p>
+            <p style="margin: 2px 0;margin-left:10px;"><strong>Student:</strong> <span class="underline">${student.lastName}, ${student.firstName} ${student?.middleName || ''}</span></p>
             <p style="margin: 2px 0;margin-left:10px;"><strong>Sex:</strong> <span class="underline">${student.gender || 'M'}</span></p>
             <p style="margin: 2px 0;margin-left:10px;"><strong>Date of Birth:</strong> <span class="underline">${student.dob ? new Date(student.dob).toLocaleDateString('en-US') : 'N/A'}</span></p>
           </div>
           <div>
             <p style="margin: 2px 0;margin-left:10px;"><strong>Grade:</strong> <span class="underline">${student.gradeLevel}</span></p>
             <p style="margin: 2px 0;margin-left:10px;"><strong>Registration #:</strong> <span class="underline">${student.admissionNumber}</span></p>
-            <p style="margin: 2px 0;margin-left:10px;"><strong>Class:</strong> <span class="underline">${student.classSection || 'N/A'}</span></p>
+            <p style="margin: 2px 0;margin-left:10px;"><strong>Class:</strong> <span class="underline">${student.classSection || 'N/A'}</span>
+            Department<span>${student.department}</span>
+            </p>
           </div>
         </div>
       </div>

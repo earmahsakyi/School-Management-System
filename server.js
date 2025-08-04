@@ -1,11 +1,22 @@
 const express = require('express');
 const ConnectDB = require('./config/db');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit')
 
 const app = express();
 
 // Connect database 
 ConnectDB();
+
+app.use(helmet());
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per 15 minutes
+  message: 'Too many requests from this IP, please try again later.'
+});
+app.use(limiter);
 
 // Middleware
 app.use(express.json({ extended: false }));

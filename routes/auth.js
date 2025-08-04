@@ -4,12 +4,20 @@ const authController = require('../controllers/authController');
 const auth = require('../middleware/auth');
 const { check, body } =require('express-validator');
 const secretKey = require('../middleware/checkSecretKey')
+const rateLimit = require('express-rate-limit');
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5, 
+  message: {
+    msg: 'Too many login attempts. Please try again after 15 minutes.'
+  },
+});
 
 router.get('/',auth, authController.getLoginUser);
 router.post('/login', [
     check("email", "Please include a valid email").isEmail(),
     check("password", "Password is required").exists()
-], authController.AuthUserToken);
+],loginLimiter, authController.AuthUserToken);
 
 router.post('/register',secretKey,[
     check('email', 'Please enter your email').isEmail(),
