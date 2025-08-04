@@ -490,7 +490,7 @@ const generatePdf = async (reportCardData) => {
       <div class="student-info" style="margin-bottom: 5px;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <div>
-            <p style="margin: 2px 0;margin-left:10px;font-size: 12pt;"><strong>Student:</strong> <span class="underline">${student.lastName}, ${student.firstName} ${student?.middleName || ''}</span></p>
+            <p style="margin: 2px 0;margin-left:10px;font-size: 10pt;"><strong>Student:</strong> <span class="underline">${student.lastName}, ${student.firstName} ${student?.middleName || ''}</span></p>
             <p style="margin: 2px 0;margin-left:10px; font-size: 12pt;"><strong>Sex:</strong> <span class="underline">${student.gender || 'M'}</span></p>
             <p style="margin: 2px 0;margin-left:10px; font-size: 12pt;"><strong>Date of Birth:</strong> <span class="underline">${student.dob ? new Date(student.dob).toLocaleDateString('en-US') : 'N/A'}</span></p>
           </div>
