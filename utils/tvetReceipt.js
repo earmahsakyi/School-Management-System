@@ -92,7 +92,7 @@ const generateTvetReceiptsPdf = async ({ receipts }) => {
           .school-name {
             font-size: 9pt; /* Adjusted font size */
             font-weight: bold;
-            color: chocolate;
+            color: maroon;
             margin: 1px 0;
           }
           .school-location, .country, .contact {
@@ -125,7 +125,7 @@ const generateTvetReceiptsPdf = async ({ receipts }) => {
           }
           .receipt-info p {
             margin: 1px 0;
-            font-size: 7pt;
+            font-size: 9pt;
           }
           table {
             width: 100%;

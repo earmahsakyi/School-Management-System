@@ -252,7 +252,7 @@ exports.updatePromotionStatus = async (req, res) => {
     }
 
     // Original manual promotion logic
-    const validStatuses = ['Promoted', 'Not Promoted', 'Conditional Promotion', 'Asked Not to Enroll'];
+    const validStatuses = ['Promoted', 'Not Promoted', 'Conditional Promotion', 'Asked Not to Enroll','Graduated'];
     const validGrades = ['7', '8', '9', '10', '11', '12'];
 
     if (!validStatuses.includes(promotionStatus)) {

@@ -80,17 +80,17 @@ const generateReceiptsPdf = async ({ receipts }) => {
             text-align: center;
           }
           .school-name {
-            font-size: 10pt;
+            font-size: 11pt;
             font-weight: bold;
-            color: chocolate;
+            color: maroon;
             margin: 2px 0;
           }
           .school-location, .country, .contact {
-            font-size: 6pt;
+            font-size: 7pt;
             margin: 1px 0;
           }
           .document-title {
-            font-size: 8pt;
+            font-size: 9pt;
             font-weight: bold;
             text-decoration: underline;
             color: teal;
@@ -105,7 +105,7 @@ const generateReceiptsPdf = async ({ receipts }) => {
           }
           .student-info p {
             margin: 2px 0;
-            font-size: 7pt;
+            font-size: 10pt;
           }
           .underline {
             border-bottom: 1px solid #000;
@@ -175,7 +175,7 @@ const generateReceiptsPdf = async ({ receipts }) => {
                     <p><strong>MOE Registration:</strong> <span class="underline">${payment.moeRegistration}</span></p>
                     <p>
                       <strong>Student ID:</strong> <span class="underline">${student.admissionNumber}</span>
-                      <strong> Name:</strong> <span class="underline">${student.lastName} ${student.firstName} ${student?.middleName || ''}</span>
+                      <strong> Name:</strong> <span class="underline">${student.lastName}, ${student.firstName} ${student?.middleName || ''}</span>
                     </p>
                     <div style="display: flex; justify-content: space-between;">
                       <p><strong>Description</strong></p>

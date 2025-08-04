@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DashboardLayout } from '../dashboard/DashboardLayout'; 
-
 import { Search, Download, Loader2, FileSpreadsheet, Filter } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; 
@@ -20,23 +19,25 @@ const MasterGradeSheet = () => {
   const [selectedGrade, setSelectedGrade] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('');
   const [academicYear, setAcademicYear] = useState(new Date().getFullYear().toString());
   const [downloading, setDownloading] = useState(false);
 
-  // Common grade levels and subjects (you can adjust these based on your school)
-  const gradeLevels = ['7','8','9', '10', '11', '12'];
+  // Common grade levels, sections, subjects, and departments
+  const gradeLevels = ['7', '8', '9', '10', '11', '12'];
   const classSections = ['A', 'B', 'C', 'D'];
   const subjects = [
-     "English", "Mathematics", "General Science", "Social Studies", "Civics",
-      "Literature", "Religious and Moral Education (RME)", "Physical Education (PE)",
-      "Agriculture", "Computer Science", "History", "Biology", "Economics",
-      "Geography", "R.O.T.C", "French", "Chemistry", "Physics","Automotive","Electricity",
+    "English", "Mathematics", "General Science", "Social Studies", "Civics",
+    "Literature", "Religious and Moral Education (RME)", "Physical Education (PE)",
+    "Agriculture", "Computer Science", "History", "Biology", "Economics",
+    "Geography", "R.O.T.C", "French", "Chemistry", "Physics", "Automotive", "Electricity"
   ];
+  const departments = ['Arts', 'Science', 'JHS', 'All'];
 
   // Handle Master Grade Sheet PDF generation
   const handleGenerateMasterSheet = async () => {
     if (!selectedGrade || !selectedSection || !selectedSubject) {
-      alert('Please select Grade Level, Class Section, and Subject to generate the master grade sheet.');
+      toast.error('Please select Grade Level, Class Section, and Subject to generate the master grade sheet.');
       return;
     }
 
@@ -49,9 +50,12 @@ const MasterGradeSheet = () => {
         subject: selectedSubject,
         academicYear: academicYear
       });
+      if (selectedDepartment && selectedDepartment !== 'All') {
+        queryParams.append('department', selectedDepartment);
+      }
 
       // API endpoint for generating the master grade sheet 
-      const url = `/api/master-grade-sheet?${queryParams}`; 
+      const url = `/api/master-grade-sheet?${queryParams}`;
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -65,7 +69,7 @@ const MasterGradeSheet = () => {
       link.href = downloadUrl;
 
       // Format filename
-      const filename = `Master_Grade_Sheet_Grade${selectedGrade}_Section${selectedSection}_${selectedSubject}_${academicYear}.pdf`;
+      const filename = `Master_Grade_Sheet_Grade${selectedGrade}_Section${selectedSection}_${selectedSubject}_${academicYear}${selectedDepartment && selectedDepartment !== 'All' ? `_${selectedDepartment}` : ''}.pdf`;
       link.download = filename;
 
       document.body.appendChild(link);
@@ -89,7 +93,7 @@ const MasterGradeSheet = () => {
     return () => {
       dispatch(clearStudentErrors());
     };
-  }, [dispatch]); // dispatch is stable, so it's fine here.
+  }, [dispatch]);
 
   // Filter students based on search term and selected filters
   const filteredStudents = students?.filter(student => {
@@ -100,16 +104,15 @@ const MasterGradeSheet = () => {
 
     const matchesGrade = !selectedGrade || student?.gradeLevel === selectedGrade;
     const matchesSection = !selectedSection || student?.classSection === selectedSection;
+    const matchesDepartment = !selectedDepartment || selectedDepartment === 'All' || student?.department === selectedDepartment;
 
-    // Filter by subject is not applied here, as it's for the *generation* logic, not for *displaying* students in the preview table.
-    // The preview table shows students based on grade/section/search, irrespective of selected subject for the PDF.
-    return matchesSearch && matchesGrade && matchesSection;
+    return matchesSearch && matchesGrade && matchesSection && matchesDepartment;
   }) || [];
 
-  // Get unique grade levels and sections from students data
-  // Ensure these are derived from the *actual* student data to show available options
+  // Get unique grade levels, sections, and departments from students data
   const availableGrades = [...new Set(students?.map(s => s.gradeLevel).filter(Boolean))].sort();
   const availableSections = [...new Set(students?.map(s => s.classSection).filter(Boolean))].sort();
+  const availableDepartments = [...new Set(students?.map(s => s.department).filter(Boolean))].sort();
 
   return (
     <DashboardLayout>
@@ -144,46 +147,59 @@ const MasterGradeSheet = () => {
                   placeholder="2024"
                 />
               </div>
-                <div>
+              <div>
                 <label htmlFor="gradeLevel" className="block text-sm font-medium mb-2">Grade Level</label>
                 <Select onValueChange={setSelectedGrade} value={selectedGrade} id="gradeLevel">
-                    <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select Grade" />
-                    </SelectTrigger>
-                    <SelectContent>
+                  </SelectTrigger>
+                  <SelectContent>
                     {(availableGrades.length > 0 ? availableGrades : gradeLevels).map(grade => (
-                        <SelectItem key={grade} value={grade}>Grade {grade}</SelectItem>
+                      <SelectItem key={grade} value={grade}>Grade {grade}</SelectItem>
                     ))}
-                    </SelectContent>
+                  </SelectContent>
                 </Select>
-                </div>
-                <div>
+              </div>
+              <div>
                 <label htmlFor="classSection" className="block text-sm font-medium mb-2">Class Section</label>
                 <Select onValueChange={setSelectedSection} value={selectedSection} id="classSection">
-                    <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select Section" />
-                    </SelectTrigger>
-                    <SelectContent>
+                  </SelectTrigger>
+                  <SelectContent>
                     {(availableSections.length > 0 ? availableSections : classSections).map(section => (
-                        <SelectItem key={section} value={section}>Section {section}</SelectItem>
+                      <SelectItem key={section} value={section}>Section {section}</SelectItem>
                     ))}
-                    </SelectContent>
+                  </SelectContent>
                 </Select>
-                </div>
-                <div>
+              </div>
+              <div>
+                <label htmlFor="department" className="block text-sm font-medium mb-2">Department</label>
+                <Select onValueChange={setSelectedDepartment} value={selectedDepartment} id="department">
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select Department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Departments</SelectItem>
+                    {(availableDepartments.length > 0 ? availableDepartments : departments.filter(d => d !== 'All')).map(dept => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <label htmlFor="subject" className="block text-sm font-medium mb-2">Subject</label>
                 <Select onValueChange={setSelectedSubject} value={selectedSubject} id="subject">
-                    <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select Subject" />
-                    </SelectTrigger>
-                    <SelectContent>
+                  </SelectTrigger>
+                  <SelectContent>
                     {subjects.map(subject => (
-                        <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                      <SelectItem key={subject} value={subject}>{subject}</SelectItem>
                     ))}
-                    </SelectContent>
+                  </SelectContent>
                 </Select>
-                </div>
-
+              </div>
               <div className="flex items-end">
                 <Button
                   onClick={handleGenerateMasterSheet}
@@ -208,6 +224,7 @@ const MasterGradeSheet = () => {
             {selectedGrade && selectedSection && (
               <div className="text-sm text-muted-foreground mt-4">
                 <strong>Preview:</strong> This will generate a master grade sheet for Grade {selectedGrade}, Section {selectedSection}
+                {selectedDepartment && selectedDepartment !== 'All' && `, Department ${selectedDepartment}`}
                 {selectedSubject && ` - ${selectedSubject}`} (targeting {filteredStudents.length} students currently displayed)
               </div>
             )}
@@ -241,7 +258,7 @@ const MasterGradeSheet = () => {
         ) : filteredStudents.length === 0 ? (
           <Alert>
             <AlertDescription>
-              {selectedGrade || selectedSection ?
+              {selectedGrade || selectedSection || selectedDepartment ?
                 'No students found matching the selected criteria.' :
                 searchTerm ? 'No students found matching your search criteria.' : 'No students found.'
               }
@@ -267,6 +284,7 @@ const MasterGradeSheet = () => {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -288,6 +306,11 @@ const MasterGradeSheet = () => {
                           {student.classSection}
                         </span>
                       </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {student.department || 'N/A'}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -297,11 +320,11 @@ const MasterGradeSheet = () => {
         )}
 
         {/* Summary Info */}
-        {!loading && (students?.length > 0 || searchTerm || selectedGrade || selectedSection) && (
+        {!loading && (students?.length > 0 || searchTerm || selectedGrade || selectedSection || selectedDepartment) && (
           <div className="mt-4 text-sm text-muted-foreground">
             Showing {filteredStudents.length} of {students?.length || 0} students
             {searchTerm && ` matching "${searchTerm}"`}
-            {(selectedGrade || selectedSection) && ' with selected filters'}
+            {(selectedGrade || selectedSection || selectedDepartment) && ' with selected filters'}
           </div>
         )}
       </motion.div>

@@ -56,7 +56,7 @@ const generateTvetFinancialReportPdf = async ({ payments, filters }) => {
         .header { text-align: center; margin-bottom: 15mm; }
         .header-content { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .header-text { flex: 1; text-align: center; }
-        .school-name { font-size: 16pt; font-weight: bold; margin-bottom: 5px; }
+        .school-name { font-size: 16pt; font-weight: bold; margin-bottom: 5px; color:maroon; }
         .school-location { font-size: 12pt; margin-bottom: 3px; }
         .country { font-size: 12pt; margin-bottom: 3px; }
         .contact { font-size: 10pt; margin-bottom: 10px; }

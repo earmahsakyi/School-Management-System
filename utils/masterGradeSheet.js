@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-const generateMasterGradeSheetPdf = async ({ students, gradeLevel, classSection, subject, academicYear }) => {
+const generateMasterGradeSheetPdf = async ({ students, gradeLevel, classSection, subject, academicYear, department }) => {
   const logo1Base64 = fs.readFileSync(path.join(__dirname, '../logo1.png')).toString('base64');
   const logo2Base64 = fs.readFileSync(path.join(__dirname, '../logo2.png')).toString('base64');
 
@@ -14,6 +14,7 @@ const generateMasterGradeSheetPdf = async ({ students, gradeLevel, classSection,
       <td>${student.middleName || ''}</td>
       <td>${student.gender}</td>
       <td>${student.admissionNumber}</td>
+      <td>${student.department || 'N/A'}</td>
       <td></td><td></td><td></td><td></td><td></td>
       <td></td><td></td><td></td><td></td><td></td>
       <td></td>
@@ -123,7 +124,7 @@ const generateMasterGradeSheetPdf = async ({ students, gradeLevel, classSection,
       </div>
       <h2 style="text-align: center;">MASTER GRADE SHEET</h2>
       <p style="text-align: center;"><strong>For Academic Year:</strong> <span class="underline">${academicYear || ''}</span></p>
-      <p><strong>Grade:</strong> <span class="underline">${gradeLevel}</span> <strong>Class Section:</strong> <span class="underline">${classSection}</span></p>
+      <p><strong>Grade:</strong> <span class="underline">${gradeLevel}</span> <strong>Class Section:</strong> <span class="underline">${classSection}</span> <strong>Department:</strong> <span class="underline">${department}</span></p>
       <p><strong>Subject:</strong> <span class="underline">${subject}</span> <strong>Instructor:</strong> <span class="underline"></span></p>
     </div>
 
@@ -136,6 +137,7 @@ const generateMasterGradeSheetPdf = async ({ students, gradeLevel, classSection,
           <th>Middle Name</th>
           <th>Sex</th>
           <th>ID#</th>
+          <th>Department</th>
           <th>1st</th>
           <th>2nd</th>
           <th>3rd</th>

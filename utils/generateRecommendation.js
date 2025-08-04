@@ -25,9 +25,15 @@ const generateRecommendationPdf = async (student, recommendationData = {}) => {
 
     // Helper function to create checked/unchecked checkboxes
     const createCheckbox = (name, isChecked = false) => {
-      return `<input type="checkbox" ${isChecked ? 'checked' : ''} disabled style="margin-right: 5px;"><label>${name}</label>`;
-    };
-
+  // Add a hidden input and a custom span for the box
+  return `
+    <label class="checkbox-container">
+      <input type="checkbox" ${isChecked ? 'checked' : ''} disabled>
+      <span class="checkmark"></span>
+      ${name}
+    </label>
+  `;
+};
     const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
@@ -79,7 +85,7 @@ body {
     .school-name {
       font-size: 16pt;
       font-weight: bold;
-      color: chocolate;
+      color: maroon;
       margin: 3px 0;
     }
     
@@ -169,6 +175,62 @@ body {
       margin-bottom: 3px;
       color: red;
     }
+    .checkbox-container {
+      display: block;
+      position: relative;
+      padding-left: 20px; /* Adjust as needed */
+      margin-bottom: 5px;
+      cursor: default;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    .checkbox-container input {
+      position: absolute;
+      opacity: 0;
+      cursor: default;
+      height: 0;
+      width: 0;
+    }
+
+    .checkmark {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 15px; /* Adjust size of the box */
+      width: 15px; /* Adjust size of the box */
+      background-color: #eee;
+      border: 1px solid #333; /* Dark border for visibility */
+    }
+
+    .checkbox-container input:checked ~ .checkmark {
+      background-color: #555; /* Dark background when checked */
+      border: 1px solid #000;
+    }
+
+    .checkmark:after {
+      content: "";
+      position: absolute;
+      display: none;
+    }
+
+    .checkbox-container input:checked ~ .checkmark:after {
+      display: block;
+    }
+
+    .checkbox-container .checkmark:after {
+      left: 4px;
+      top: 1px;
+      width: 5px;
+      height: 10px;
+      border: solid white;
+      border-width: 0 3px 3px 0;
+      -webkit-transform: rotate(45deg);
+      -ms-transform: rotate(45deg);
+      transform: rotate(45deg);
+    }
     
     @media print {
       body {
@@ -208,7 +270,7 @@ body {
     </div>
 
     <div class="student-info">
-      <p><strong>This is to introduce the bearer</strong> <span class="underline"> ${student.lastName} ${student.firstName} ${student?.middleName || ''}</span></p>
+      <p><strong>This is to introduce the bearer</strong> <span class="underline"> ${student.lastName}, ${student.firstName} ${student?.middleName || ''}</span></p>
       <p>as a bona fide ${studentStatus} of Voinjama Multilateral High School who now desires to</p>
       <p><span class="filled-line">${purpose}</span></p>
       

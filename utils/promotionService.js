@@ -5,6 +5,36 @@ const Student = require('../models/Student');
 const PromotionRecord = require('../models/PromotionRecord');
 
 /**
+ * Define core subjects for each department
+ */
+const CORE_SUBJECTS = {
+  JHS: [
+    "General Science",
+    "Mathematics", 
+    "English",
+    "Social Studies"
+  ],
+  Science: [
+    "Mathematics",
+    "English",
+    "Chemistry",
+    "Biology", 
+    "Geography",
+    "Physics",
+    "Economics"
+  ],
+  Arts: [
+    "Mathematics",
+    "English", 
+    "Literature",
+    "Biology",
+    "Economics",
+    "Geography",
+    "History"
+  ]
+};
+
+/**
  * Calculate yearly average for a subject across both semesters
  * @param {Object} semester1Subject - Subject data from semester 1
  * @param {Object} semester2Subject - Subject data from semester 2
@@ -105,73 +135,148 @@ const getStudentYearlyAverages = async (studentId, academicYear) => {
 };
 
 /**
- * Determine promotion status based on yearly averages
+ * Determine promotion status based on yearly averages and core subject requirements
  * @param {Array} subjectAverages - Array of subject yearly averages
+ * @param {string} department - Student's department (JHS, Science, Arts)
  * @returns {Object} - Promotion decision and details
  */
-const determinePromotionStatus = (subjectAverages) => {
+const determinePromotionStatus = (subjectAverages, department) => {
   const totalSubjects = subjectAverages.length;
   const failingSubjects = subjectAverages.filter(subject => subject.yearlyAverage < 70);
   const failingCount = failingSubjects.length;
 
-  // Check if student has exactly 8 subjects (requirement)
-  if (totalSubjects <= 7) {
+  // Check if student has the minimum required subjects
+  const minimumSubjects = department === 'JHS' ? 8 : 8; // Keeping the original requirement
+  if (totalSubjects < minimumSubjects) {
     return {
       promotionStatus: 'Not Promoted',
-      reason: `Student must offer exactly 8 subjects. Currently has ${totalSubjects} subjects.`,
+      reason: `Student must offer at least ${minimumSubjects} subjects. Currently has ${totalSubjects} subjects.`,
       failingSubjects: failingSubjects.map(s => s.subject),
       failingCount,
       canPromote: false,
-      recommendations: ['Ensure student is enrolled in exactly 8 subjects']
+      recommendations: [`Ensure student is enrolled in at least ${minimumSubjects} subjects`]
     };
   }
+
+  // Get core subjects for the department
+  const coreSubjects = CORE_SUBJECTS[department] || [];
+  
+  // Identify core subjects that the student is taking
+  const studentCoreSubjects = subjectAverages.filter(subject => 
+    coreSubjects.some(coreSubject => 
+      // Handle variations in subject names (e.g., "General Science" vs "Science")
+      subject.subject === coreSubject || 
+      (coreSubject === "General Science" && subject.subject === "Science") ||
+      (coreSubject === "Science" && subject.subject === "General Science")
+    )
+  );
+
+  // Find failing core subjects
+  const failingCoreSubjects = studentCoreSubjects.filter(subject => subject.yearlyAverage < 70);
+  const failingCoreCount = failingCoreSubjects.length;
+
+  // Find failing non-core subjects
+  const nonCoreSubjects = subjectAverages.filter(subject => 
+    !coreSubjects.some(coreSubject => 
+      subject.subject === coreSubject || 
+      (coreSubject === "General Science" && subject.subject === "Science") ||
+      (coreSubject === "Science" && subject.subject === "General Science")
+    )
+  );
+  const failingNonCoreSubjects = nonCoreSubjects.filter(subject => subject.yearlyAverage < 70);
+  const failingNonCoreCount = failingNonCoreSubjects.length;
 
   let promotionStatus;
   let reason;
   let canPromote = false;
   let recommendations = [];
 
-  if (failingCount === 0) {
-    // All subjects >= 70
-    promotionStatus = 'Promoted';
-    reason = 'All subjects have yearly average >= 70';
-    canPromote = true;
-    recommendations.push('Student meets all promotion requirements');
-  } else if (failingCount === 1) {
-    // Only 1 subject < 70
-    promotionStatus = 'Conditional Promotion';
-    reason = `Only 1 subject (${failingSubjects[0].subject}) has yearly average < 70`;
-    canPromote = true;
-    recommendations.push(
-      `Student needs improvement in ${failingSubjects[0].subject} (${failingSubjects[0].yearlyAverage}%)`,
-      'Provide additional support and monitoring for the failing subject',
-      'Consider remedial classes or tutoring'
-    );
-  } else {
-    // 2 or more subjects < 70
+  // Core subject promotion logic
+  if (failingCoreCount >= 2) {
+    // Two or more core subjects failing - NOT PROMOTED
     promotionStatus = 'Not Promoted';
-    reason = `${failingCount} subjects have yearly average < 70`;
+    reason = `${failingCoreCount} core subjects have yearly average < 70: ${failingCoreSubjects.map(s => s.subject).join(', ')}`;
     canPromote = false;
     recommendations.push(
-      'Student needs significant improvement in multiple subjects',
-      'Consider repeating the current grade level',
-      'Implement comprehensive academic support plan',
-      `Focus on improving: ${failingSubjects.map(s => `${s.subject} (${s.yearlyAverage}%)`).join(', ')}`
+      'Student failed 2 or more core subjects and must repeat the grade',
+      'Focus on intensive remediation in core subjects',
+      `Core subjects requiring improvement: ${failingCoreSubjects.map(s => `${s.subject} (${s.yearlyAverage}%)`).join(', ')}`
     );
+    
+    if (failingNonCoreCount > 0) {
+      recommendations.push(`Additional non-core subjects also need improvement: ${failingNonCoreSubjects.map(s => `${s.subject} (${s.yearlyAverage}%)`).join(', ')}`);
+    }
+  } else if (failingCoreCount === 1) {
+    // One core subject failing
+    if (failingNonCoreCount === 0) {
+      // Only one core subject failing, all non-core subjects passing
+      promotionStatus = 'Conditional Promotion';
+      reason = `Only 1 core subject (${failingCoreSubjects[0].subject}) has yearly average < 70, all non-core subjects passing`;
+      canPromote = true;
+      recommendations.push(
+        `Student needs improvement in core subject: ${failingCoreSubjects[0].subject} (${failingCoreSubjects[0].yearlyAverage}%)`,
+        'Provide intensive support and monitoring for the failing core subject',
+        'Consider remedial classes or tutoring for the core subject',
+        'Student may be promoted with conditions'
+      );
+    } else {
+      // One core subject failing AND some non-core subjects failing
+      promotionStatus = 'Conditional Promotion';
+      reason = `1 core subject (${failingCoreSubjects[0].subject}) and ${failingNonCoreCount} non-core subjects have yearly average < 70`;
+      canPromote = true;
+      recommendations.push(
+        `Core subject requiring improvement: ${failingCoreSubjects[0].subject} (${failingCoreSubjects[0].yearlyAverage}%)`,
+        `Non-core subjects requiring improvement: ${failingNonCoreSubjects.map(s => `${s.subject} (${s.yearlyAverage}%)`).join(', ')}`,
+        'Provide comprehensive academic support plan',
+        'Priority focus on the failing core subject',
+        'Student may be promoted with conditions'
+      );
+    }
+  } else {
+    // No core subjects failing
+    if (failingNonCoreCount === 0) {
+      // All subjects passing
+      promotionStatus = 'Promoted';
+      reason = 'All subjects have yearly average >= 70';
+      canPromote = true;
+      recommendations.push('Student meets all promotion requirements');
+    } else {
+      // Only non-core subjects failing
+      promotionStatus = 'Promoted';
+      reason = `All core subjects passing. ${failingNonCoreCount} non-core subjects have yearly average < 70`;
+      canPromote = true;
+      recommendations.push(
+        'Student promoted as all core subjects are passing',
+        `Non-core subjects needing improvement: ${failingNonCoreSubjects.map(s => `${s.subject} (${s.yearlyAverage}%)`).join(', ')}`,
+        'Consider additional support for non-core subjects'
+      );
+    }
   }
 
   return {
     promotionStatus,
     reason,
     failingSubjects: failingSubjects.map(s => s.subject),
+    failingCoreSubjects: failingCoreSubjects.map(s => s.subject),
+    failingNonCoreSubjects: failingNonCoreSubjects.map(s => s.subject),
     failingCount,
+    failingCoreCount,
+    failingNonCoreCount,
     canPromote,
     recommendations,
     promotionDetails: {
       totalSubjects,
+      totalCoreSubjects: studentCoreSubjects.length,
+      totalNonCoreSubjects: nonCoreSubjects.length,
       passingSubjects: totalSubjects - failingCount,
+      passingCoreSubjects: studentCoreSubjects.length - failingCoreCount,
+      passingNonCoreSubjects: nonCoreSubjects.length - failingNonCoreCount,
       failingSubjects: failingCount,
-      averageThreshold: 70
+      failingCoreSubjects: failingCoreCount,
+      failingNonCoreSubjects: failingNonCoreCount,
+      averageThreshold: 70,
+      coreSubjectsRequired: coreSubjects,
+      department
     }
   };
 };
@@ -211,35 +316,42 @@ const processAutomaticPromotion = async (studentId, academicYear, promotedById) 
       };
     }
 
-    // Determine promotion status
-    const promotionDecision = determinePromotionStatus(subjectAverages);
+    // Determine student's department
+    let department = student.department || 'JHS';
+    const gradeLevel = parseInt(student.gradeLevel);
+    
+    // Auto-determine department based on grade level if not set
+    if (gradeLevel >= 7 && gradeLevel <= 9) {
+      department = 'JHS';
+    } else if (gradeLevel >= 10 && gradeLevel <= 12) {
+      // Keep existing department for SHS students, default to Arts if not specified
+      department = student.department || 'Arts';
+    }
+
+    // Determine promotion status using new core subject logic
+    const promotionDecision = determinePromotionStatus(subjectAverages, department);
 
     // Calculate next grade level
-    // const currentGrade = parseInt(student.gradeLevel);
-    // const nextGrade = currentGrade + 1;
-    // const promotedToGrade = nextGrade <= 12 ? nextGrade.toString() : null;
-
     const currentGrade = parseInt(student.gradeLevel);
-let promotedToGrade = null;
-let graduated = false;
+    let promotedToGrade = null;
+    let graduated = false;
 
-if (currentGrade === 12 && promotionDecision.canPromote) {
-  // Graduation logic
-  student.graduated = true;
-  student.graduationDate = new Date();
-  student.promotedToGrade = null;
-  student.promotionStatus = 'Graduated';
-  graduated = true;
-} else {
-  promotedToGrade = promotionDecision.canPromote ? (currentGrade + 1).toString() : null;
-  student.promotedToGrade = promotedToGrade;
-  student.promotionStatus = promotionDecision.promotionStatus;
+    if (currentGrade === 12 && promotionDecision.canPromote) {
+      // Graduation logic
+      student.graduated = true;
+      student.graduationDate = new Date();
+      student.promotedToGrade = null;
+      student.promotionStatus = 'Graduated';
+      graduated = true;
+    } else {
+      promotedToGrade = promotionDecision.canPromote ? (currentGrade + 1).toString() : null;
+      student.promotedToGrade = promotedToGrade;
+      student.promotionStatus = promotionDecision.promotionStatus;
 
-  if (promotionDecision.canPromote && promotedToGrade) {
-    student.gradeLevel = promotedToGrade;
-  }
-}
-
+      if (promotionDecision.canPromote && promotedToGrade) {
+        student.gradeLevel = promotedToGrade;
+      }
+    }
 
     // Prepare promotion data
     const promotionData = {
@@ -251,6 +363,7 @@ if (currentGrade === 12 && promotionDecision.canPromote) {
       overallYearlyAverage,
       subjectAverages,
       promotionDecision,
+      department,
       processedAt: new Date()
     };
 
@@ -265,6 +378,22 @@ if (currentGrade === 12 && promotionDecision.canPromote) {
 
     await student.save();
 
+    // Create detailed promotion notes
+    let promotionNotes = '';
+    if (graduated) {
+      promotionNotes = `Student graduated from Grade 12 (${department} Department). Overall average: ${overallYearlyAverage}%. All core subjects requirement met.`;
+    } else {
+      promotionNotes = `Automatic promotion based on core subject performance in ${department} Department. ${promotionDecision.reason}. Overall yearly average: ${overallYearlyAverage}%.`;
+      
+      if (promotionDecision.failingCoreCount > 0) {
+        promotionNotes += ` Failing core subjects: ${promotionDecision.failingCoreSubjects.join(', ')}.`;
+      }
+      
+      if (promotionDecision.failingNonCoreCount > 0) {
+        promotionNotes += ` Failing non-core subjects: ${promotionDecision.failingNonCoreSubjects.join(', ')}.`;
+      }
+    }
+
     // Create promotion record
     const promotionRecord = await PromotionRecord.create({
       student: studentId,
@@ -273,13 +402,11 @@ if (currentGrade === 12 && promotionDecision.canPromote) {
       promotionStatus: promotionDecision.promotionStatus,
       promotedBy: promotedById,
       graduated: student.graduated,
-      notes: student.graduated
-    ? `Student graduated from Grade 12. Overall average: ${overallYearlyAverage}%`
-    : `Automatic promotion based on yearly averages. ${promotionDecision.reason}. Overall yearly average: ${overallYearlyAverage}%.`
+      notes: promotionNotes
     });
 
     return {
-        success: true,
+      success: true,
       message: graduated
         ? 'Student has graduated from Grade 12.'
         : `Student promotion processed successfully: ${promotionDecision.promotionStatus}`,
@@ -296,7 +423,8 @@ if (currentGrade === 12 && promotionDecision.canPromote) {
           promotionStatus: student.promotionStatus,
           promotedToGrade: student.promotedToGrade,
           graduated: student.graduated,
-          graduationDate: student.graduationDate
+          graduationDate: student.graduationDate,
+          department: department
         }
       }
     };
@@ -326,6 +454,7 @@ const processBatchPromotions = async (studentIds, academicYear, promotedById) =>
       promoted: 0,
       conditionallyPromoted: 0,
       notPromoted: 0,
+      graduated: 0,
       errors: 0
     }
   };
@@ -348,6 +477,9 @@ const processBatchPromotions = async (studentIds, academicYear, promotedById) =>
           case 'Not Promoted':
             results.summary.notPromoted++;
             break;
+          case 'Graduated':
+            results.summary.graduated++;
+            break;
         }
       } else {
         results.failed.push({
@@ -367,7 +499,7 @@ const processBatchPromotions = async (studentIds, academicYear, promotedById) =>
 
   return {
     success: true,
-    message: `Batch promotion completed. ${results.summary.promoted} promoted, ${results.summary.conditionallyPromoted} conditionally promoted, ${results.summary.notPromoted} not promoted, ${results.summary.errors} errors.`,
+    message: `Batch promotion completed. ${results.summary.promoted} promoted, ${results.summary.conditionallyPromoted} conditionally promoted, ${results.summary.notPromoted} not promoted, ${results.summary.graduated} graduated, ${results.summary.errors} errors.`,
     data: results
   };
 };
@@ -394,7 +526,27 @@ const getPromotionPreview = async (studentId, academicYear) => {
     }
 
     const { subjectAverages, overallYearlyAverage, hasBothSemesters } = yearlyData.data;
-    const promotionDecision = determinePromotionStatus(subjectAverages);
+    
+    // Determine student's department
+    let department = student.department || 'JHS';
+    const gradeLevel = parseInt(student.gradeLevel);
+    
+    if (gradeLevel >= 7 && gradeLevel <= 9) {
+      department = 'JHS';
+    } else if (gradeLevel >= 10 && gradeLevel <= 12) {
+      department = student.department || 'Arts';
+    }
+    
+    const promotionDecision = determinePromotionStatus(subjectAverages, department);
+
+    let nextGrade = null;
+    if (promotionDecision.canPromote) {
+      if (gradeLevel === 12) {
+        nextGrade = 'Graduation';
+      } else {
+        nextGrade = (gradeLevel + 1).toString();
+      }
+    }
 
     return {
       success: true,
@@ -403,16 +555,18 @@ const getPromotionPreview = async (studentId, academicYear) => {
           id: student._id,
           firstName: `${student.firstName}`,
           lastName: `${student.lastName}`,
-          middleName : `${student.middleName}`,
+          middleName: `${student.middleName || ''}`,
           admissionNumber: student.admissionNumber,
-          currentGrade: student.gradeLevel
+          currentGrade: student.gradeLevel,
+          department: department
         },
         academicYear,
         hasBothSemesters,
         overallYearlyAverage,
         subjectAverages,
         promotionDecision,
-        nextGrade: promotionDecision.canPromote ? (parseInt(student.gradeLevel) + 1).toString() : null
+        nextGrade,
+        coreSubjects: CORE_SUBJECTS[department] || []
       }
     };
 
@@ -431,5 +585,6 @@ module.exports = {
   processAutomaticPromotion,
   processBatchPromotions,
   getPromotionPreview,
-  calculateYearlySubjectAverage
+  calculateYearlySubjectAverage,
+  CORE_SUBJECTS
 };

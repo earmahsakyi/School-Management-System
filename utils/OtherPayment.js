@@ -73,7 +73,7 @@ const generateReceiptPdf = async ({ student, payment }) => {
         .school-name {
           font-size: 18pt;
           font-weight: bold;
-          color: chocolate;
+          color: maroon;
           margin: 5px 0;
         }
         
@@ -193,7 +193,7 @@ const generateReceiptPdf = async ({ student, payment }) => {
              <strong>Deposit No:</strong><span class="underline">${payment.bankDepositNumber || '-'}</span></p>
           <p><strong>Other Payments:</strong> <span class="underline">${payment.paymentOf}</span></p>
           <p><strong>Student ID:</strong><span class="underline">${student.admissionNumber}</span>
-             <strong>Student Name:</strong><span class="underline">${student.lastName} ${student.firstName} ${student.middleName || ''}</span>
+             <strong>Student Name:</strong><span class="underline">${student.lastName}, ${student.firstName} ${student.middleName || ''}</span>
           </p>
           <p><strong>Grade Level:</strong> <span class="underline">${student.gradeLevel}</span>
              <strong>Department:</strong> <span class="underline">${student.department}</span>
@@ -449,7 +449,7 @@ const generateBatchReceiptsPdf = async (payments) => {
                     <p><strong>Other Payments:</strong> <span class="underline">${payment.paymentOf}</span></p>
                     <p>
                       <strong>Student ID:</strong> <span class="underline">${student.admissionNumber}</span>
-                      <strong>Name:</strong> <span class="underline">${student.lastName} ${student.firstName} ${student.middleName || ''}</span>
+                      <strong>Name:</strong> <span class="underline">${student.lastName}, ${student.firstName} ${student.middleName || ''}</span>
                     </p>
                     <p>
                       <strong>Grade:</strong> <span class="underline">${student.gradeLevel}</span>

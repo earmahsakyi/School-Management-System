@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-const generateFinancialReportPdf = async ({ payments, gradeLevel, classSection, academicYear, filters }) => {
+const generateFinancialReportPdf = async ({ payments, gradeLevel, classSection, academicYear, department, filters }) => {
   const logo1Base64 = fs.readFileSync(path.join(__dirname, '../logo1.png')).toString('base64');
   const logo2Base64 = fs.readFileSync(path.join(__dirname, '../logo2.png')).toString('base64');
 
@@ -19,6 +19,7 @@ const generateFinancialReportPdf = async ({ payments, gradeLevel, classSection, 
         <td>${student.middleName || ''}</td>
         <td>${student.gender}</td>
         <td>${student.admissionNumber}</td>
+        <td>${student.department || 'N/A'}</td>
         <td>${payment.receiptNumber}</td>
         <td>$${payment.amount.toFixed(2)} LRD</td>
         <td>${new Date(payment.dateOfPayment).toLocaleDateString()}</td>
@@ -70,7 +71,9 @@ const generateFinancialReportPdf = async ({ payments, gradeLevel, classSection, 
         <h2 class="document-title">MOE STUDENTS REGISTRATION FINANCIAL REPORTS</h2>
         <p class="academic-year"><strong>For Academic Year:</strong> <span class="underline">${academicYear || ''}</span></p>
         <div class="class-info">
-          <p><strong>Grade:</strong> <span class="underline">${gradeLevel}</span> &nbsp;&nbsp;&nbsp; <strong>Class Section:</strong> <span class="underline">${classSection}</span></p>
+          <p><strong>Grade:</strong> <span class="underline">${gradeLevel}</span> &nbsp;&nbsp;&nbsp; 
+             <strong>Class Section:</strong> <span class="underline">${classSection}</span> &nbsp;&nbsp;&nbsp;
+             <strong>Department:</strong> <span class="underline">${department}</span></p>
         </div>
       </div>
 
@@ -78,6 +81,7 @@ const generateFinancialReportPdf = async ({ payments, gradeLevel, classSection, 
         <p><strong>Report Filters:</strong>
         Grade Level: ${filters.gradeLevel || 'All'}
         | Class Section: ${filters.classSection || 'All'}
+        | Department: ${filters.department || 'All'}
         | Academic Year: ${filters.academicYear || 'All'}
         ${filters.startDate ? ` | From: ${new Date(filters.startDate).toLocaleDateString()}` : ''}
         ${filters.endDate ? ` | To: ${new Date(filters.endDate).toLocaleDateString()}` : ''}
@@ -93,6 +97,7 @@ const generateFinancialReportPdf = async ({ payments, gradeLevel, classSection, 
             <th>Middle Name</th>
             <th>Sex</th>
             <th>ID#</th>
+            <th>Department</th>
             <th>Receipt#</th>
             <th>Amount</th>
             <th>Date of Payment</th>
@@ -102,7 +107,7 @@ const generateFinancialReportPdf = async ({ payments, gradeLevel, classSection, 
         <tbody>
           ${tableRows}
           <tr class="total-row">
-            <td colspan="7" class="center">Total Amount:</td>
+            <td colspan="8" class="center">Total Amount:</td>
             <td><strong>$${totalAmount.toFixed(2)} LRD</strong></td>
             <td colspan="2"></td>
           </tr>

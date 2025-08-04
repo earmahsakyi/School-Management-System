@@ -19,17 +19,19 @@ const FinancialReport = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('');
   const [academicYear, setAcademicYear] = useState(new Date().getFullYear().toString());
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [downloading, setDownloading] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [reportData, setReportData] = useState(null);
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
-  // Common grade levels and class sections
+  // Common grade levels, class sections, and departments
   const gradeLevels = ['7', '8', '9', '10', '11', '12'];
   const classSections = ['A', 'B', 'C', 'D'];
+  const departments = ['Arts', 'Science', 'JHS', 'All'];
 
   // Handle Financial Report PDF generation
   const handleGenerateFinancialReport = async () => {
@@ -46,9 +48,11 @@ const FinancialReport = () => {
         classSection: selectedSection,
         academicYear: academicYear
       });
-
       if (startDate) queryParams.append('startDate', startDate);
       if (endDate) queryParams.append('endDate', endDate);
+      if (selectedDepartment && selectedDepartment !== 'All') {
+        queryParams.append('department', selectedDepartment);
+      }
 
       const url = `/api/financial/report?${queryParams}`;
       const response = await fetch(url);
@@ -63,7 +67,7 @@ const FinancialReport = () => {
       const link = document.createElement('a');
       link.href = downloadUrl;
 
-      const filename = `Financial_Report_Grade${selectedGrade}_Section${selectedSection}_${academicYear}.pdf`;
+      const filename = `Financial_Report_Grade${selectedGrade}_Section${selectedSection}_${academicYear}${selectedDepartment && selectedDepartment !== 'All' ? `_${selectedDepartment}` : ''}.pdf`;
       link.download = filename;
 
       document.body.appendChild(link);
@@ -96,9 +100,11 @@ const FinancialReport = () => {
         classSection: selectedSection,
         academicYear: academicYear
       });
-
       if (startDate) queryParams.append('startDate', startDate);
       if (endDate) queryParams.append('endDate', endDate);
+      if (selectedDepartment && selectedDepartment !== 'All') {
+        queryParams.append('department', selectedDepartment);
+      }
 
       const url = `/api/financial/report-data?${queryParams}`;
       const response = await fetch(url);
@@ -129,9 +135,10 @@ const FinancialReport = () => {
     };
   }, [dispatch]);
 
-  // Get unique grade levels and sections from students data
+  // Get unique grade levels, sections, and departments from students data
   const availableGrades = [...new Set(students?.map(s => s.gradeLevel).filter(Boolean))].sort();
   const availableSections = [...new Set(students?.map(s => s.classSection).filter(Boolean))].sort();
+  const availableDepartments = [...new Set(students?.map(s => s.department).filter(Boolean))].sort();
 
   // Filter report data based on search term
   const filteredPayments = reportData?.payments?.filter(payment => {
@@ -159,12 +166,12 @@ const FinancialReport = () => {
           <h1 className="text-3xl font-bold text-foreground">Financial Report Generator</h1>
         </div>
         <Button 
-          onClick={()=> navigate('/tvet-report')}
+          onClick={() => navigate('/tvet-report')}
           className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
-            >
-             <FileText className="h-4 w-4 mr-2" />
-               Tvet Financial Report Page
-              </Button>
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          Tvet Financial Report Page
+        </Button>
 
         {/* Financial Report Generation Section */}
         <Card className="mb-8">
@@ -175,7 +182,7 @@ const FinancialReport = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <div>
                 <label htmlFor="academicYear" className="block text-sm font-medium mb-2">Academic Year *</label>
                 <Input
@@ -186,7 +193,6 @@ const FinancialReport = () => {
                   placeholder="2024"
                 />
               </div>
-              
               <div>
                 <label htmlFor="gradeLevel" className="block text-sm font-medium mb-2">Grade Level *</label>
                 <Select onValueChange={setSelectedGrade} value={selectedGrade} id="gradeLevel">
@@ -200,7 +206,6 @@ const FinancialReport = () => {
                   </SelectContent>
                 </Select>
               </div>
-              
               <div>
                 <label htmlFor="classSection" className="block text-sm font-medium mb-2">Class Section *</label>
                 <Select onValueChange={setSelectedSection} value={selectedSection} id="classSection">
@@ -214,12 +219,26 @@ const FinancialReport = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <label htmlFor="department" className="block text-sm font-medium mb-2">Department</label>
+                <Select onValueChange={setSelectedDepartment} value={selectedDepartment} id="department">
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select Department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Departments</SelectItem>
+                    {(availableDepartments.length > 0 ? availableDepartments : departments.filter(d => d !== 'All')).map(dept => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Date Range Filters */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
-                <label htmlFor="startDate" className=" text-sm font-medium mb-2 flex items-center">
+                <label htmlFor="startDate" className="text-sm font-medium mb-2 flex items-center">
                   <Calendar className="h-4 w-4 mr-2" />
                   Start Date (Optional)
                 </label>
@@ -230,9 +249,8 @@ const FinancialReport = () => {
                   onChange={(e) => setStartDate(e.target.value)}
                 />
               </div>
-              
               <div>
-                <label htmlFor="endDate" className=" text-sm font-medium mb-2 flex items-center">
+                <label htmlFor="endDate" className="text-sm font-medium mb-2 flex items-center">
                   <Calendar className="h-4 w-4 mr-2" />
                   End Date (Optional)
                 </label>
@@ -265,7 +283,6 @@ const FinancialReport = () => {
                   </>
                 )}
               </Button>
-              
               <Button
                 onClick={handleGenerateFinancialReport}
                 disabled={downloading || !selectedGrade || !selectedSection || !academicYear}
@@ -287,7 +304,9 @@ const FinancialReport = () => {
 
             {(selectedGrade && selectedSection && academicYear) && (
               <div className="text-sm text-muted-foreground mt-4 p-3 bg-blue-50 rounded-lg">
-                <strong>Report Configuration:</strong> Financial report for Grade {selectedGrade}, Section {selectedSection}, Academic Year {academicYear}
+                <strong>Report Configuration:</strong> Financial report for Grade {selectedGrade}, Section {selectedSection}
+                {selectedDepartment && selectedDepartment !== 'All' && `, Department ${selectedDepartment}`}, 
+                Academic Year {academicYear}
                 {startDate && ` from ${new Date(startDate).toLocaleDateString()}`}
                 {endDate && ` to ${new Date(endDate).toLocaleDateString()}`}
               </div>
@@ -335,6 +354,7 @@ const FinancialReport = () => {
                         <th className="border border-gray-300 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
                         <th className="border border-gray-300 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student Name</th>
                         <th className="border border-gray-300 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID#</th>
+                        <th className="border border-gray-300 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
                         <th className="border border-gray-300 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Receipt#</th>
                         <th className="border border-gray-300 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                         <th className="border border-gray-300 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
@@ -351,6 +371,7 @@ const FinancialReport = () => {
                               {student.lastName}, {student.firstName} {student.middleName || ''}
                             </td>
                             <td className="border border-gray-300 px-4 py-3 text-sm font-medium">{student.admissionNumber}</td>
+                            <td className="border border-gray-300 px-4 py-3 text-sm">{student.department || 'N/A'}</td>
                             <td className="border border-gray-300 px-4 py-3 text-sm">{payment.receiptNumber}</td>
                             <td className="border border-gray-300 px-4 py-3 text-sm font-semibold text-green-600">
                               ${payment.amount.toFixed(2)} LRD
@@ -365,7 +386,7 @@ const FinancialReport = () => {
                         );
                       })}
                       <tr className="bg-gray-100 font-semibold">
-                        <td colSpan="4" className="border border-gray-300 px-4 py-3 text-sm text-right">
+                        <td colSpan="5" className="border border-gray-300 px-4 py-3 text-sm text-right">
                           <strong>Total Amount:</strong>
                         </td>
                         <td className="border border-gray-300 px-4 py-3 text-sm font-bold text-green-600">
@@ -416,7 +437,9 @@ const FinancialReport = () => {
             {searchTerm && ` matching "${searchTerm}"`}
             {reportData.filters && (
               <span>
-                {' '}for Grade {reportData.filters.gradeLevel}, Section {reportData.filters.classSection}, Academic Year {reportData.filters.academicYear}
+                {' '}for Grade {reportData.filters.gradeLevel}, Section {reportData.filters.classSection}
+                {reportData.filters.department && reportData.filters.department !== 'All' && `, Department ${reportData.filters.department}`}, 
+                Academic Year {reportData.filters.academicYear}
               </span>
             )}
           </div>

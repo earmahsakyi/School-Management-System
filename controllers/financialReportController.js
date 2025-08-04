@@ -1,11 +1,10 @@
-// controllers/financialReportController.js
 const Student = require('../models/Student');
 const Payment = require('../models/Payment');
 const generateFinancialReportPdf = require('../utils/financialReport');
 
 exports.generateFinancialReport = async (req, res) => {
   try {
-    const { gradeLevel, classSection, academicYear, startDate, endDate } = req.query;
+    const { gradeLevel, classSection, academicYear, startDate, endDate, department } = req.query;
 
     if (!gradeLevel || !classSection || !academicYear) {
       return res.status(400).json({ 
@@ -13,9 +12,16 @@ exports.generateFinancialReport = async (req, res) => {
       });
     }
 
-    // Find students matching the criteria
-    const students = await Student.find({ gradeLevel, classSection })
-      .sort({ lastName: 1, firstName: 1 });
+    // Build student query with department filter
+    const studentQuery = { gradeLevel, classSection };
+    if (department) {
+      studentQuery.department = department;
+    }
+
+    // Find students matching the criteria, sorted by lastName and firstName
+    const students = await Student.find(studentQuery)
+      .sort({ lastName: 1, firstName: 1 })
+      .select('firstName lastName middleName gender admissionNumber department');
 
     if (!students || students.length === 0) {
       return res.status(404).json({ 
@@ -45,7 +51,7 @@ exports.generateFinancialReport = async (req, res) => {
 
     // Find payments and populate student data
     const payments = await Payment.find(paymentQuery)
-      .populate('student', 'firstName lastName middleName gender admissionNumber')
+      .populate('student', 'firstName lastName middleName gender admissionNumber department')
       .sort({ dateOfPayment: -1 });
 
     if (!payments || payments.length === 0) {
@@ -69,7 +75,8 @@ exports.generateFinancialReport = async (req, res) => {
         lastName: payment.student.lastName,
         middleName: payment.student.middleName,
         gender: payment.student.gender,
-        admissionNumber: payment.student.admissionNumber
+        admissionNumber: payment.student.admissionNumber,
+        department: payment.student.department
       }
     }));
 
@@ -78,17 +85,19 @@ exports.generateFinancialReport = async (req, res) => {
       gradeLevel,
       classSection,
       academicYear,
+      department: department || 'Not Specified',
       filters: {
         gradeLevel,
         classSection,
         academicYear,
         startDate,
-        endDate
+        endDate,
+        department
       }
     });
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline; filename="financial_report.pdf"');
+    res.setHeader('Content-Disposition', `inline; filename="financial_report_${gradeLevel}_${classSection}_${academicYear}${department ? `_${department}` : ''}.pdf"`);
     res.send(pdfBuffer);
 
   } catch (err) {
@@ -99,7 +108,7 @@ exports.generateFinancialReport = async (req, res) => {
 
 exports.getFinancialReportData = async (req, res) => {
   try {
-    const { gradeLevel, classSection, academicYear, startDate, endDate } = req.query;
+    const { gradeLevel, classSection, academicYear, startDate, endDate, department } = req.query;
 
     if (!gradeLevel || !classSection || !academicYear) {
       return res.status(400).json({ 
@@ -107,9 +116,16 @@ exports.getFinancialReportData = async (req, res) => {
       });
     }
 
+    // Build student query with department filter
+    const studentQuery = { gradeLevel, classSection };
+    if (department) {
+      studentQuery.department = department;
+    }
+
     // Find students matching the criteria
-    const students = await Student.find({ gradeLevel, classSection })
-      .sort({ lastName: 1, firstName: 1 });
+    const students = await Student.find(studentQuery)
+      .sort({ lastName: 1, firstName: 1 })
+      .select('firstName lastName middleName gender admissionNumber department');
 
     if (!students || students.length === 0) {
       return res.status(404).json({ 
@@ -139,7 +155,7 @@ exports.getFinancialReportData = async (req, res) => {
 
     // Find payments and populate student data
     const payments = await Payment.find(paymentQuery)
-      .populate('student', 'firstName lastName middleName gender admissionNumber')
+      .populate('student', 'firstName lastName middleName gender admissionNumber department')
       .sort({ dateOfPayment: -1 });
 
     // Calculate total amount
@@ -160,7 +176,8 @@ exports.getFinancialReportData = async (req, res) => {
         lastName: payment.student.lastName,
         middleName: payment.student.middleName,
         gender: payment.student.gender,
-        admissionNumber: payment.student.admissionNumber
+        admissionNumber: payment.student.admissionNumber,
+        department: payment.student.department
       }
     }));
 
@@ -175,7 +192,8 @@ exports.getFinancialReportData = async (req, res) => {
           classSection,
           academicYear,
           startDate,
-          endDate
+          endDate,
+          department
         }
       }
     });

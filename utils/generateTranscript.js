@@ -113,7 +113,7 @@ body {
     .school-name {
       font-size: 18pt;
       font-weight: bold;
-      color: chocolate;
+      color: maroon;
       margin: 5px 0;
     }
     
@@ -201,9 +201,9 @@ body {
     }
 
     /* Grade specific colors - TEXT COLOR ONLY (copied from generatePDF.js) */
-    .grade-cell.grade-a { color: #006600; font-weight: bold; }
+    .grade-cell.grade-a { color: #0066cc; font-weight: bold; }
     .grade-cell.grade-b { color: #0066cc; font-weight: bold; }
-    .grade-cell.grade-c { color: #ff6600; font-weight: bold; }
+    .grade-cell.grade-c { color:#0066cc ; font-weight: bold; }
     .grade-cell.grade-d { color: #cc0000; font-weight: bold; }
     .grade-cell.grade-f { color: #990000; font-weight: bold; background-color: #ffe6e6; }
     
@@ -277,9 +277,9 @@ body {
         </div>
         <img src="data:image/png;base64,${logo2Base64}" class="seal-img" alt="Right Seal" />
       </div>
-     <h2 class="document-title">
-  ${student.promotionStatus === 'Graduated' ? 'GRADUATION CERTIFICATE AND TRANSCRIPT' : 'CERTIFICATION OF TRANSFER AND ACADEMIC TRANSCRIPT'}
-    </h2>
+      <h2 class="document-title">
+        ${student.promotionStatus === 'Graduated' ? 'GRADUATION CERTIFICATE AND TRANSCRIPT' : 'CERTIFICATION OF TRANSFER AND ACADEMIC TRANSCRIPT'}
+      </h2>
     </div>
 
     <div class="date-section">
@@ -287,7 +287,7 @@ body {
     </div>
 
     <div class="student-info">
-      <p><strong>Name of Student:</strong> <span class="underline"> ${student.lastName} ${student.firstName} ${student?.middleName || ''}</span></p>
+      <p><strong>Name of Student:</strong> <span class="underline"> ${student.lastName}, ${student.firstName} ${student?.middleName || ''}</span></p>
       <p><strong>Admission Number:</strong> <span class="underline">${student.admissionNumber}</span></p>
       <p><strong>Grade Last Attended:</strong> <span class="underline">${student.gradeLevel}</span></p>
       <p><strong>Year(s) Attended:</strong> <span class="underline">${fromYear} – ${toYear}</span></p>
@@ -297,12 +297,15 @@ body {
       <h3>Transfer Information</h3>
       <p><strong>Reason(s) for Transfer:</strong> <span class="underline" style="min-width: 300px;"></span></p>
       <p><strong>School Transferring To:</strong> <span class="underline" style="min-width: 300px;"></span></p>
-      ${student.promotionStatus === 'Graduated' ? `
-     <p><strong>Status:</strong> <span class="underline">Graduated</span></p>
-    ` : `
-   <p><strong>Promoted to Grade:</strong> <span class="underline">${promotedToGrade}</span>
-     <strong>or Required to Repeat Grade:</strong> <span class="underline">${repeatGrade}</span></p>
-    `}
+      ${
+        student.promotionStatus === 'Graduated' ? 
+        `<p><strong>Status:</strong> <span class="underline">Graduated</span></p>` :
+        student.promotionStatus === 'Promoted' || student.promotionStatus === 'Conditional Promotion' ?
+        `<p><strong>Promoted to Grade:</strong> <span class="underline">${promotedToGrade}</span></p>` :
+        student.promotionStatus === 'Not Promoted' ?
+        `<p><strong>Required to Repeat Grade:</strong> <span class="underline">${repeatGrade}</span></p>` :
+        `<p><strong>Status:</strong> <span class="underline">Asked Not to Enroll</span></p>`
+      }
       <div style="margin-top: 10px;">
         <p><strong>Remarks:</strong></p>
         <p>1. <strong>Conduct:</strong> <span class="underline">${mostRecentConduct}</span></p>
@@ -340,10 +343,10 @@ body {
       <p class="motto">MOTTO: STRIVING FOR POSTERITY</p>
     </div>
     ${student.promotionStatus === 'Graduated' ? `
-  <p style="font-size: 11pt; text-align: center; margin-top: 10mm;">
-    This certifies that the student has fulfilled all academic requirements for graduation from Voinjama Multilateral High School.
-  </p>
-` : ''}
+      <p style="font-size: 11pt; text-align: center; margin-top: 10mm;">
+        This certifies that the student has fulfilled all academic requirements for graduation from Voinjama Multilateral High School.
+      </p>
+    ` : ''}
   </div>
 </body>
 </html>`;
