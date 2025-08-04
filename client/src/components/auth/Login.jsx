@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { login } from '../../actions/authAction';
 import { toast } from 'react-hot-toast';
 import { Sparkles } from 'lucide-react';
-import logo from '../../assets/logo.jpg'; // <-- import your logo
+import logo from '../../assets/logo.jpg';
 
 const floatingVariants = {
   animate: { 
@@ -35,35 +35,63 @@ const Login = () => {
 
   const onSubmit = async e => {
     e.preventDefault();
+    
     if (!formData.email || !formData.password) {
       toast.error('All fields are required');
       return;
     }
+
     try {
+      console.log('Attempting login with:', { email: formData.email }); // Debug log
+      
       const result = await dispatch(login(formData));
       
-      if (result?.success) {
+      console.log('Login result:', result); // Debug log
+      
+      // Check if result exists and has the expected structure
+      if (result && result.success) {
+        toast.success("Login Successful");
+        
         if (result.role === 'admin') {
-          toast.success("Login Successful")
           navigate(result.profileUpdated ? '/admin-dashboard' : '/complete-admin-profile');
         } else if (result.role === 'parent') {
           navigate('/parent-dashboard');
+        } else {
+          // Handle other roles or default navigation
+          toast.error('Unknown user role');
+          console.log('Unknown role:', result.role);
         }
-      } 
+      } else {
+        // Handle case where login didn't return success
+        const errorMsg = result?.message || result?.msg || 'Login failed - no success response';
+        toast.error(errorMsg);
+        console.log('Login failed:', result);
+      }
        
-    }catch (err) {
-  const errorMsg = err.response?.data?.msg || 
-                   err.response?.data?.message || 
-                   'Login failed';
+    } catch (err) {
+      console.error('Login error:', err); // Debug log
+      
+      // More robust error handling
+      let errorMsg = 'Login failed';
+      
+      if (err.response?.data?.msg) {
+        errorMsg = err.response.data.msg;
+      } else if (err.response?.data?.message) {
+        errorMsg = err.response.data.message;
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
 
-  if (errorMsg.toLowerCase().includes("account is locked")) {
-    setLockedOut(true);
-    toast.error("Your account has been locked. Try again later or contact the school admin.");
-    return;
-  }
+      if (errorMsg.toLowerCase().includes("account is locked") || 
+          errorMsg.toLowerCase().includes("too many") ||
+          err.response?.status === 423) {
+        setLockedOut(true);
+        toast.error("Your account has been locked. Try again later or contact the school admin.");
+        return;
+      }
 
-  toast.error(errorMsg);
-}
+      toast.error(errorMsg);
+    }
   };
 
   return (
@@ -81,6 +109,13 @@ const Login = () => {
           animate="animate"
         />
       ))}
+
+      {/* Lockout Message */}
+      {lockedOut && (
+        <div className=" top-4 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative z-20 max-w-md">
+          Your account is locked due to too many failed login attempts. Please try again later or contact school admin.
+        </div>
+      )}
 
       {/* Glass Card */}
       <motion.div 
@@ -111,6 +146,7 @@ const Login = () => {
               value={formData.email}
               onChange={onChange}
               className="mt-1 block w-full p-3 rounded-xl border border-gray-300 shadow-sm focus:border-primary focus:ring-primary bg-white/60 backdrop-blur"
+              required
             />
           </div>
 
@@ -123,6 +159,7 @@ const Login = () => {
               onChange={onChange}
               minLength={6}
               className="mt-1 block w-full p-3 rounded-xl border border-gray-300 shadow-sm focus:border-primary focus:ring-primary bg-white/60 backdrop-blur"
+              required
             />
             <span 
               onClick={() => setShowPassword(!showPassword)}
@@ -139,7 +176,7 @@ const Login = () => {
           <button 
             type="submit" 
             disabled={loading || lockedOut}
-            className="w-full bg-primary text-white py-3 rounded-xl hover:bg-blue-700 transition-all flex justify-center items-center"
+            className="w-full bg-primary text-white py-3 rounded-xl hover:bg-blue-700 transition-all flex justify-center items-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? <FaSpinner className="animate-spin" /> : 'Login'}
           </button>
@@ -149,11 +186,6 @@ const Login = () => {
           <Link to="/register" className="text-sm text-white hover:underline">Create new account</Link>
         </div>
       </motion.div>
-      {lockedOut && (
-    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-    Your account is locked due to too many failed login attempts. Please try again later or contact school admin.
-     </div>
-    )}
     </div>
   );
 };
