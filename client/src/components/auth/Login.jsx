@@ -42,11 +42,11 @@ const Login = () => {
     }
 
     try {
-      console.log('Attempting login with:', { email: formData.email }); // Debug log
+     
       
       const result = await dispatch(login(formData));
       
-      console.log('Login result:', result); // Debug log
+    
       
       // Check if result exists and has the expected structure
       if (result && result.success) {
@@ -59,17 +59,17 @@ const Login = () => {
         } else {
           // Handle other roles or default navigation
           toast.error('Unknown user role');
-          console.log('Unknown role:', result.role);
+        
         }
       } else {
         // Handle case where login didn't return success
         const errorMsg = result?.message || result?.msg || 'Login failed - no success response';
         toast.error(errorMsg);
-        console.log('Login failed:', result);
+   
       }
        
     } catch (err) {
-      console.error('Login error:', err); // Debug log
+      console.error('Login error:', err);
       
       // More robust error handling
       let errorMsg = 'Login failed';
@@ -112,10 +112,10 @@ const Login = () => {
 
       {/* Lockout Message */}
       {lockedOut && (
-        <div className=" top-4 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative z-20 max-w-md">
-          Your account is locked due to too many failed login attempts. Please try again later or contact school admin.
-        </div>
-      )}
+     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mt-4">
+    Your account is locked due to too many failed login attempts. Please try again later or contact school admin.
+    </div>
+    )}
 
       {/* Glass Card */}
       <motion.div 

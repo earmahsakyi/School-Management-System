@@ -67,20 +67,28 @@ exports.AuthUserToken = async (req, res) => {
     }
 
     // Check manual lock
-    if (user.lockedManually) {
+    if (user.lockedManually === true) {
       return res.status(423).json({ 
         success: false,
         msg: 'Account locked by admin. Contact school office to unlock.' 
       });
     }
 
-    // Check timed lock
-    if (user.lockUntil && user.lockUntil > Date.now()) {
-      const wait = Math.ceil((user.lockUntil - Date.now()) / 60000);
+    // Check timed lock - be more explicit about the check
+    if (user.lockUntil && typeof user.lockUntil === 'object' && user.lockUntil > new Date()) {
+      const wait = Math.ceil((user.lockUntil.getTime() - Date.now()) / 60000);
       return res.status(423).json({ 
         success: false,
         msg: `Account locked. Try again in ${wait} minute(s).` 
       });
+    }
+
+    // Clear expired lock
+    if (user.lockUntil && user.lockUntil <= new Date()) {
+      user.lockUntil = null;
+      user.loginAttempts = 0;
+      user.lockLevel = 0;
+      await user.save();
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -124,7 +132,7 @@ exports.AuthUserToken = async (req, res) => {
           }
 
         } else {
-          user.lockUntil = Date.now() + LOCK_DURATIONS[user.lockLevel];
+          user.lockUntil = new Date(Date.now() + LOCK_DURATIONS[user.lockLevel]);
         }
 
         await user.save();

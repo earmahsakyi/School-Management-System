@@ -424,7 +424,7 @@ const generatePdf = async (reportCardData) => {
         <h3 style="text-align:center; color:blue;">PROMOTION STATEMENT</h3>
         <p style="text-align: center; font-size: 12pt;">This certifies that:</p>
         <p style="text-align: center; font-size: 14pt; font-weight: bold;">
-          <span class="underline"> ${student.lastName} ${student.firstName} ${student?.middleName || ''}</span>
+          <span class="underline"> ${student.lastName}, ${student.firstName} ${student?.middleName || ''}</span>
         </p>
 
         <div>
@@ -490,22 +490,22 @@ const generatePdf = async (reportCardData) => {
       <div class="student-info" style="margin-bottom: 5px;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <div>
-            <p style="margin: 2px 0;margin-left:10px;"><strong>Student:</strong> <span class="underline">${student.lastName}, ${student.firstName} ${student?.middleName || ''}</span></p>
-            <p style="margin: 2px 0;margin-left:10px;"><strong>Sex:</strong> <span class="underline">${student.gender || 'M'}</span></p>
-            <p style="margin: 2px 0;margin-left:10px;"><strong>Date of Birth:</strong> <span class="underline">${student.dob ? new Date(student.dob).toLocaleDateString('en-US') : 'N/A'}</span></p>
+            <p style="margin: 2px 0;margin-left:10px;font-size: 12pt;"><strong>Student:</strong> <span class="underline">${student.lastName}, ${student.firstName} ${student?.middleName || ''}</span></p>
+            <p style="margin: 2px 0;margin-left:10px; font-size: 12pt;"><strong>Sex:</strong> <span class="underline">${student.gender || 'M'}</span></p>
+            <p style="margin: 2px 0;margin-left:10px; font-size: 12pt;"><strong>Date of Birth:</strong> <span class="underline">${student.dob ? new Date(student.dob).toLocaleDateString('en-US') : 'N/A'}</span></p>
           </div>
           <div>
-            <p style="margin: 2px 0;margin-left:10px;"><strong>Grade:</strong> <span class="underline">${student.gradeLevel}</span></p>
-            <p style="margin: 2px 0;margin-left:10px;"><strong>Registration #:</strong> <span class="underline">${student.admissionNumber}</span></p>
-            <p style="margin: 2px 0;margin-left:10px;"><strong>Class:</strong> <span class="underline">${student.classSection || 'N/A'}</span>
-            Department<span>${student.department}</span>
+            <p style="margin: 2px 0;margin-left:10px;font-size: 12pt;"><strong>Grade:</strong> <span class="underline">${student.gradeLevel}</span></p>
+            <p style="margin: 2px 0;margin-left:10px;font-size: 12pt;"><strong>Registration #:</strong> <span class="underline">${student.admissionNumber}</span></p>
+            <p style="margin: 2px 0;margin-left:10px;font-size: 12pt;"><strong>Class:</strong> <span class="underline">${student.classSection || 'N/A'}</span>
+            <strong>Department:</strong> <span>${student.department}</span>
             </p>
           </div>
         </div>
       </div>
 
       <div class="parent-notice" style="margin-bottom: 5px;">
-        <h3 style="margin-bottom: 2px; font-size: 12px;margin-left:10px;">PARENTS OR GUARDIANS NOTICE</h3>
+        <h3 style="margin-bottom: 2px; font-size: 12px;margin-left:10px; text-align:center;">PARENTS OR GUARDIANS NOTICE</h3>
         <p class="small-text" style="margin: 2px 0;margin-left:10px;"><strong>Grade Explanation:</strong> Grades shown on this report card represent the cumulative average of homework, classwork, participation, quizzes, projects, and tests for each academic subject.</p>
         <p class="small-text" style="margin: 2px 0;margin-left:10px;"><strong>Purpose:</strong> The grades are not meant for comparison with other children, but rather to encourage and help them strive for better performance.</p>
         <p class="small-text" style="margin: 2px 0;margin-left:10px;"><strong>Action Required:</strong> Parents and Guardians should give special attention to the grades and work with teachers to support their child's academic progress.</p>
