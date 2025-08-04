@@ -12,7 +12,33 @@ app.set('trust proxy', 1);
 // Connect database 
 ConnectDB();
 
-app.use(helmet());
+// Configure helmet with custom CSP for images
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: [
+        "'self'", 
+        "data:", 
+        "https://ui-avatars.com",
+        "https://*.amazonaws.com",
+        "https://s3.amazonaws.com",
+        "https://*.s3.amazonaws.com",
+        "https://vmhsbucket.s3.eu-north-1.amazonaws.com/admin/",
+        "https://vmhsbucket.s3.eu-north-1.amazonaws.com/staff/",
+        "https://vmhsbucket.s3.eu-north-1.amazonaws.com/student/",
+        "https://vmhsbucket.s3.amazonaws.com",
+      ],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+}));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
