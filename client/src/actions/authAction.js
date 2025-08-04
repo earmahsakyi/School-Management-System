@@ -134,10 +134,14 @@ export const login = (formData) => async (dispatch) => {
 
   } catch (err) {
     const errorMsg = err.response?.data?.msg || 
-                   err.response?.data?.message || 
-                   'Login failed';
-    
-     toast.error(errorMsg) 
+                 err.response?.data?.message || 
+                 'Login failed';
+
+if (errorMsg.toLowerCase().includes("account is locked")) {
+  toast.error("Your account has been locked. Try again later or contact school admin.");
+} else {
+  toast.error(errorMsg);
+} 
     
     dispatch({
       type: LOGIN_FAIL,

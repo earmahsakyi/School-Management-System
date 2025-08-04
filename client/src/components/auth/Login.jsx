@@ -24,6 +24,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const { loading } = useSelector(state => state.auth);
+  const [lockedOut, setLockedOut] = useState(false);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -48,10 +49,21 @@ const Login = () => {
         } else if (result.role === 'parent') {
           navigate('/parent-dashboard');
         }
-      }  
-    } catch (err) {
-      console.error("Login error:", err);
-    }
+      } 
+       
+    }catch (err) {
+  const errorMsg = err.response?.data?.msg || 
+                   err.response?.data?.message || 
+                   'Login failed';
+
+  if (errorMsg.toLowerCase().includes("account is locked")) {
+    setLockedOut(true);
+    toast.error("Your account has been locked. Try again later or contact the school admin.");
+    return;
+  }
+
+  toast.error(errorMsg);
+}
   };
 
   return (
@@ -126,7 +138,7 @@ const Login = () => {
 
           <button 
             type="submit" 
-            disabled={loading}
+            disabled={loading || lockedOut}
             className="w-full bg-primary text-white py-3 rounded-xl hover:bg-blue-700 transition-all flex justify-center items-center"
           >
             {loading ? <FaSpinner className="animate-spin" /> : 'Login'}
@@ -137,6 +149,11 @@ const Login = () => {
           <Link to="/register" className="text-sm text-white hover:underline">Create new account</Link>
         </div>
       </motion.div>
+      {lockedOut && (
+    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+    Your account is locked due to too many failed login attempts. Please try again later or contact school admin.
+     </div>
+    )}
     </div>
   );
 };
