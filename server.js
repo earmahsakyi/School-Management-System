@@ -6,6 +6,9 @@ const rateLimit = require('express-rate-limit')
 
 const app = express();
 
+// Enable trust proxy for Railway
+app.set('trust proxy', 1);
+
 // Connect database 
 ConnectDB();
 
@@ -14,8 +17,10 @@ app.use(helmet());
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per 15 minutes
-  message: 'Too many requests from this IP, please try again later.'
-});
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true, // Include RateLimit headers in responses
+  legacyHeaders: false, // Disable older X-RateLimit headers
+})
 app.use(limiter);
 
 // Middleware
@@ -46,7 +51,6 @@ app.use('/api/tvet-financial', require('./routes/tvetFinancialReport'));
 app.use(express.static(path.join(__dirname, 'client', 'dist')));
 
 // For all other routes (non-API), return React index.html (for React Router)
-// Using regex to avoid path-to-regexp issues with '*' wildcard
 app.get(/^(?!\/api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'client', 'dist', 'index.html'));
 });
