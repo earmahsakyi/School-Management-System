@@ -498,7 +498,7 @@ const generatePdf = async (reportCardData) => {
             <p style="margin: 2px 0;margin-left:10px;font-size: 12pt;"><strong>Grade:</strong> <span class="underline">${student.gradeLevel}</span></p>
             <p style="margin: 2px 0;margin-left:10px;font-size: 12pt;"><strong>Registration #:</strong> <span class="underline">${student.admissionNumber}</span></p>
             <p style="margin: 2px 0;margin-left:10px;font-size: 12pt;"><strong>Class:</strong> <span class="underline">${student.classSection || 'N/A'}</span>
-            <strong>Department:</strong> <span class="underline">${student.department}</span>
+            <strong>Depart:</strong> <span class="underline">${student.department}</span>
             </p>
           </div>
         </div>
