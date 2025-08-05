@@ -1,27 +1,11 @@
 {
-  "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS",
-    "commands": [
-      "cd client && npm install && npm run build"
-    ],
-    "environment": {
-      "REACT_APP_GRADE_SECTION_PASSCODE": "${{REACT_APP_GRADE_SECTION_PASSCODE}}",
-      "REACT_APP_STUDENTS_PASSCODE": "${{REACT_APP_STUDENTS_PASSCODE}}",
-      "REACT_APP_STAFF_PASSCODE": "${{REACT_APP_STAFF_PASSCODE}}",
-      "REACT_APP_TRANSCRIPT_PASSCODE": "${{REACT_APP_TRANSCRIPT_PASSCODE}}",
-      "REACT_APP_GRADE_SHEET_PASSCODE": "${{REACT_APP_GRADE_SHEET_PASSCODE}}",
-      "REACT_APP_ROSTER_SUMMARY_PASSCODE": "${{REACT_APP_ROSTER_SUMMARY_PASSCODE}}",
-      "REACT_APP_PAYMENTS_PASSCODE": "${{REACT_APP_PAYMENTS_PASSCODE}}",
-      "REACT_APP_PROMOTION_PASSCODE": "${{REACT_APP_PROMOTION_PASSCODE}}",
-      "REACT_APP_OTHER_PAYMENTS_PASSCODE": "${{REACT_APP_OTHER_PAYMENTS_PASSCODE}}",
-      "REACT_APP_TVET_PAYMENTS_PASSCODE": "${{REACT_APP_TVET_PAYMENTS_PASSCODE}}",
-      "REACT_APP_FINANCIAL_REPORT_PASSCODE": "${{REACT_APP_FINANCIAL_REPORT_PASSCODE}}"
-    }
+    "command": "npm install && cd client && npm install && npm run build"
   },
   "deploy": {
-    "startCommand": "node server.js",
-    "healthcheckPath": "/",
-    "healthcheckTimeout": 10000
+    "startCommand": "npm start"
+  },
+  "env": {
+    "NODE_ENV": "production"
   }
 }
