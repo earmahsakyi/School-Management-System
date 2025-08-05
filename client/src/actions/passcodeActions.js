@@ -1,3 +1,25 @@
+// Add this at the very top of your passcodeActions.js file temporarily
+
+console.log('=== BUILD TIME ENV DEBUG ===');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('All env keys:', Object.keys(process.env));
+console.log('REACT_APP keys:', Object.keys(process.env).filter(k => k.startsWith('REACT_APP_')));
+
+// Check specific variables
+const envVars = [
+  'REACT_APP_STUDENTS_PASSCODE',
+  'REACT_APP_PAYMENTS_PASSCODE', 
+  'REACT_APP_GRADE_SECTION_PASSCODE',
+  'REACT_APP_STAFF_PASSCODE',
+  'REACT_APP_TRANSCRIPT_PASSCODE'
+];
+
+envVars.forEach(varName => {
+  console.log(`${varName}:`, process.env[varName] || 'UNDEFINED');
+});
+
+console.log('=== END ENV DEBUG ===');
+
 import {
   VERIFY_PASSCODE_SUCCESS,
   VERIFY_PASSCODE_FAIL,
