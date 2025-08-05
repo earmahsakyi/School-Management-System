@@ -6,7 +6,8 @@ import { Provider,useDispatch } from 'react-redux';
 import Home from './components/layout/Home';
 import LandingPage from './components/layout/LandingPage'
 import Register from './components/auth/Register';
-import PrivateRoute from './components/routing/PrivateRoute'
+import PrivateRoute from './components/routing/PrivateRoute';
+import PasscodeProtectedRoute from './components/routing/PasscodeProtectedRoute';
 import Students from './components/student/Student';
 import VerifyEmail from './components/auth/VerifyEmail';
 import ForgotPassword from './components/auth/ForgotPassword';
