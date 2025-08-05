@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DashboardLayout } from '../dashboard/DashboardLayout';
-import { Search, Download, Loader2, DollarSign, Filter, Calendar, Eye, FileText } from 'lucide-react';
+import { Search, Download, Loader2, DollarSign, Filter, Calendar, Eye, FileText, Printer } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +24,7 @@ const FinancialReport = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [downloading, setDownloading] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [reportData, setReportData] = useState(null);
   const navigate = useNavigate();
@@ -82,6 +83,123 @@ const FinancialReport = () => {
       toast.error(`Failed to generate financial report: ${error.message}`);
     } finally {
       setDownloading(false);
+    }
+  };
+
+  // Handle Financial Report PDF printing
+  const handlePrintFinancialReport = async () => {
+    if (!selectedGrade || !selectedSection || !academicYear) {
+      toast.error('Please select Grade Level, Class Section, and Academic Year to print the financial report.');
+      return;
+    }
+
+    try {
+      setPrinting(true);
+
+      const queryParams = new URLSearchParams({
+        gradeLevel: selectedGrade,
+        classSection: selectedSection,
+        academicYear: academicYear
+      });
+      if (startDate) queryParams.append('startDate', startDate);
+      if (endDate) queryParams.append('endDate', endDate);
+      if (selectedDepartment && selectedDepartment !== 'All') {
+        queryParams.append('department', selectedDepartment);
+      }
+
+      const url = `/api/financial/report?${queryParams}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate financial report');
+      }
+
+      const blob = await response.blob();
+      const pdfUrl = window.URL.createObjectURL(blob);
+      
+      // Method 1: Try direct window.open approach first
+      try {
+        const printWindow = window.open(pdfUrl, '_blank');
+        if (printWindow) {
+          printWindow.addEventListener('load', () => {
+            setTimeout(() => {
+              printWindow.print();
+              toast.success("Print dialog opened for Financial report!");
+            }, 500);
+          });
+
+          // Cleanup after some time
+          setTimeout(() => {
+            window.URL.revokeObjectURL(pdfUrl);
+          }, 10000);
+
+          return; // Exit early if this method works
+        }
+      } catch (error) {
+        console.log('Window.open method failed, trying iframe method:', error);
+      }
+
+      // Method 2: Fallback to iframe approach with better timing
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.border = 'none';
+      iframe.src = pdfUrl;
+
+      document.body.appendChild(iframe);
+
+      // Better event handling for iframe
+      const handleIframeLoad = () => {
+        setTimeout(() => {
+          try {
+            if (iframe.contentWindow) {
+              iframe.contentWindow.focus();
+              iframe.contentWindow.print();
+              toast.success("Print dialog opened for Financial report!");
+            }
+          } catch (error) {
+            console.error('Print error:', error);
+            // Fallback: download the file instead
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            const filename = `Financial_Report_Grade${selectedGrade}_Section${selectedSection}_${academicYear}${selectedDepartment && selectedDepartment !== 'All' ? `_${selectedDepartment}` : ''}_${new Date().getTime()}.pdf`;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("PDF downloaded successfully!");
+          }
+        }, 1000); // Increased delay to ensure PDF is fully loaded
+      };
+
+      // Add load event listener
+      iframe.addEventListener('load', handleIframeLoad);
+
+      // Cleanup function
+      const cleanup = () => {
+        try {
+          if (iframe && iframe.parentNode) {
+            iframe.removeEventListener('load', handleIframeLoad);
+            document.body.removeChild(iframe);
+          }
+          window.URL.revokeObjectURL(pdfUrl);
+        } catch (error) {
+          console.error('Cleanup error:', error);
+        }
+      };
+
+      // Cleanup after reasonable time
+      setTimeout(cleanup, 15000);
+
+    } catch (error) {
+      console.error('Print failed:', error);
+      toast.error(`Failed to print financial report: ${error.message}`);
+    } finally {
+      setPrinting(false);
     }
   };
 
@@ -291,6 +409,24 @@ const FinancialReport = () => {
                 )}
               </Button>
               <Button
+                onClick={handlePrintFinancialReport}
+                disabled={printing || !selectedGrade || !selectedSection || !academicYear}
+                variant="secondary"
+                className="flex-1"
+              >
+                {printing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Preparing Print...
+                  </>
+                ) : (
+                  <>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print PDF
+                  </>
+                )}
+              </Button>
+              <Button
                 onClick={handleGenerateFinancialReport}
                 disabled={downloading || !selectedGrade || !selectedSection || !academicYear}
                 className="flex-1"
@@ -303,7 +439,7 @@ const FinancialReport = () => {
                 ) : (
                   <>
                     <Download className="mr-2 h-4 w-4" />
-                    Generate PDF
+                    Download PDF
                   </>
                 )}
               </Button>

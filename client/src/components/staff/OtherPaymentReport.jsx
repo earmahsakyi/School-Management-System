@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DashboardLayout } from '../dashboard/DashboardLayout';
-import { Download, Loader2, DollarSign, Filter, Calendar, Eye, Search } from 'lucide-react';
+import { Download, Loader2, DollarSign, Filter, Calendar, Eye, Search, Printer } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'react-hot-toast';
@@ -18,6 +18,7 @@ const OtherPaymentReport = () => {
   const [classSection, setClassSection] = useState('');
   const [studentType, setStudentType] = useState('all');
   const [downloading, setDownloading] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -89,6 +90,118 @@ const OtherPaymentReport = () => {
       toast.error(`Failed to generate report: ${error.message}`);
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handlePrintReport = async () => {
+    if (!academicYear) {
+      toast.error('Please enter an Academic Year to print the report.');
+      return;
+    }
+
+    try {
+      setPrinting(true);
+
+      const queryParams = new URLSearchParams({ academicYear });
+      if (startDate) queryParams.append('startDate', startDate);
+      if (endDate) queryParams.append('endDate', endDate);
+      if (department) queryParams.append('department', department.trim());
+      if (gradeLevel) queryParams.append('gradeLevel', gradeLevel.trim());
+      if (classSection) queryParams.append('classSection', classSection.trim());
+      if (studentType && studentType !== 'all') queryParams.append('studentType', studentType);
+
+      const url = `/api/other/report?${queryParams}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate report');
+      }
+
+      const blob = await response.blob();
+      const pdfUrl = window.URL.createObjectURL(blob);
+      
+      // Method 1: Try direct window.open approach first
+      try {
+        const printWindow = window.open(pdfUrl, '_blank');
+        if (printWindow) {
+          printWindow.addEventListener('load', () => {
+            setTimeout(() => {
+              printWindow.print();
+              toast.success("Print dialog opened for Other Payments report!");
+            }, 500);
+          });
+
+          // Cleanup after some time
+          setTimeout(() => {
+            window.URL.revokeObjectURL(pdfUrl);
+          }, 10000);
+
+          return; // Exit early if this method works
+        }
+      } catch (error) {
+        console.log('Window.open method failed, trying iframe method:', error);
+      }
+
+      // Method 2: Fallback to iframe approach with better timing
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.border = 'none';
+      iframe.src = pdfUrl;
+
+      document.body.appendChild(iframe);
+
+      // Better event handling for iframe
+      const handleIframeLoad = () => {
+        setTimeout(() => {
+          try {
+            if (iframe.contentWindow) {
+              iframe.contentWindow.focus();
+              iframe.contentWindow.print();
+              toast.success("Print dialog opened for Other Payments report!");
+            }
+          } catch (error) {
+            console.error('Print error:', error);
+            // Fallback: download the file instead
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            link.download = `Other_Payments_Report_${academicYear}_${studentType}_${new Date().getTime()}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("PDF downloaded successfully!");
+          }
+        }, 1000); // Increased delay to ensure PDF is fully loaded
+      };
+
+      // Add load event listener
+      iframe.addEventListener('load', handleIframeLoad);
+
+      // Cleanup function
+      const cleanup = () => {
+        try {
+          if (iframe && iframe.parentNode) {
+            iframe.removeEventListener('load', handleIframeLoad);
+            document.body.removeChild(iframe);
+          }
+          window.URL.revokeObjectURL(pdfUrl);
+        } catch (error) {
+          console.error('Cleanup error:', error);
+        }
+      };
+
+      // Cleanup after reasonable time
+      setTimeout(cleanup, 15000);
+
+    } catch (error) {
+      console.error('Print failed:', error);
+      toast.error(`Failed to print report: ${error.message}`);
+    } finally {
+      setPrinting(false);
     }
   };
 
@@ -287,6 +400,24 @@ const OtherPaymentReport = () => {
                 )}
               </Button>
               <Button
+                onClick={handlePrintReport}
+                disabled={printing || !academicYear}
+                variant="secondary"
+                className="flex-1"
+              >
+                {printing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Preparing Print...
+                  </>
+                ) : (
+                  <>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print PDF
+                  </>
+                )}
+              </Button>
+              <Button
                 onClick={handleGenerateReport}
                 disabled={downloading || !academicYear}
                 className="flex-1"
@@ -299,7 +430,7 @@ const OtherPaymentReport = () => {
                 ) : (
                   <>
                     <Download className="mr-2 h-4 w-4" />
-                    Generate PDF
+                    Download PDF
                   </>
                 )}
               </Button>

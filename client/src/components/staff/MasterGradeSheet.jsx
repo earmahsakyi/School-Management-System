@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DashboardLayout } from '../dashboard/DashboardLayout'; 
-import { Search, Download, Loader2, FileSpreadsheet, Filter } from 'lucide-react';
+import { Search, Printer, Loader2, FileSpreadsheet, Filter } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; 
 import { getAllStudents, clearStudentErrors } from '../../actions/studentAction'; 
@@ -21,7 +21,7 @@ const MasterGradeSheet = () => {
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [academicYear, setAcademicYear] = useState(new Date().getFullYear().toString());
-  const [downloading, setDownloading] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   // Common grade levels, sections, subjects, and departments
   const gradeLevels = ['7', '8', '9', '10', '11', '12'];
@@ -34,15 +34,15 @@ const MasterGradeSheet = () => {
   ];
   const departments = ['Arts', 'Science', 'JHS', 'All'];
 
-  // Handle Master Grade Sheet PDF generation
-  const handleGenerateMasterSheet = async () => {
+  // Handle Master Grade Sheet PDF print
+  const handlePrintMasterSheet = async () => {
     if (!selectedGrade || !selectedSection || !selectedSubject) {
-      toast.error('Please select Grade Level, Class Section, and Subject to generate the master grade sheet.');
+      toast.error('Please select Grade Level, Class Section, and Subject to print the master grade sheet.');
       return;
     }
 
     try {
-      setDownloading(true);
+      setPrinting(true);
 
       const queryParams = new URLSearchParams({
         gradeLevel: selectedGrade,
@@ -64,24 +64,92 @@ const MasterGradeSheet = () => {
       }
 
       const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
+      const pdfUrl = window.URL.createObjectURL(blob);
 
-      // Format filename
-      const filename = `Master_Grade_Sheet_Grade${selectedGrade}_Section${selectedSection}_${selectedSubject}_${academicYear}${selectedDepartment && selectedDepartment !== 'All' ? `_${selectedDepartment}` : ''}.pdf`;
-      link.download = filename;
+      // Method 1: Try direct window.open approach first
+      try {
+        const printWindow = window.open(pdfUrl, '_blank');
+        if (printWindow) {
+          printWindow.addEventListener('load', () => {
+            setTimeout(() => {
+              printWindow.print();
+              const sheetInfo = `Grade ${selectedGrade}, Section ${selectedSection} - ${selectedSubject}`;
+              toast.success(`Print dialog opened for Master Grade Sheet: ${sheetInfo}!`);
+            }, 500);
+          });
+          
+          // Cleanup after some time
+          setTimeout(() => {
+            window.URL.revokeObjectURL(pdfUrl);
+          }, 10000);
+          
+          return; // Exit early if this method works
+        }
+      } catch (error) {
+        console.log('Window.open method failed, trying iframe method:', error);
+      }
 
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
+      // Method 2: Fallback to iframe approach with better timing
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.border = 'none';
+      iframe.src = pdfUrl;
+      
+      document.body.appendChild(iframe);
+
+      // Better event handling for iframe
+      const handleIframeLoad = () => {
+        setTimeout(() => {
+          try {
+            if (iframe.contentWindow) {
+              iframe.contentWindow.focus();
+              iframe.contentWindow.print();
+              const sheetInfo = `Grade ${selectedGrade}, Section ${selectedSection} - ${selectedSubject}`;
+              toast.success(`Print dialog opened for Master Grade Sheet: ${sheetInfo}!`);
+            }
+          } catch (error) {
+            console.error('Print error:', error);
+            // Fallback: download the file instead
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            const filename = `Master_Grade_Sheet_Grade${selectedGrade}_Section${selectedSection}_${selectedSubject}_${academicYear}${selectedDepartment && selectedDepartment !== 'All' ? `_${selectedDepartment}` : ''}.pdf`;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("PDF downloaded as fallback!");
+          }
+        }, 1000); // Increased delay to ensure PDF is fully loaded
+      };
+
+      // Add load event listener
+      iframe.addEventListener('load', handleIframeLoad);
+      
+      // Cleanup function
+      const cleanup = () => {
+        try {
+          if (iframe && iframe.parentNode) {
+            iframe.removeEventListener('load', handleIframeLoad);
+            document.body.removeChild(iframe);
+          }
+          window.URL.revokeObjectURL(pdfUrl);
+        } catch (error) {
+          console.error('Cleanup error:', error);
+        }
+      };
+
+      // Set cleanup timeout
+      setTimeout(cleanup, 15000);
 
     } catch (error) {
-      console.error('Generation failed:', error);
-      toast.error(`Failed to generate master grade sheet: ${error.message}`);
+      console.error('Print failed:', error);
+      toast.error(`Failed to print master grade sheet: ${error.message}`);
     } finally {
-      setDownloading(false);
+      setPrinting(false);
     }
   };
 
@@ -202,19 +270,19 @@ const MasterGradeSheet = () => {
               </div>
               <div className="flex items-end">
                 <Button
-                  onClick={handleGenerateMasterSheet}
-                  disabled={downloading || !selectedGrade || !selectedSection || !selectedSubject}
+                  onClick={handlePrintMasterSheet}
+                  disabled={printing || !selectedGrade || !selectedSection || !selectedSubject}
                   className="w-full"
                 >
-                  {downloading ? (
+                  {printing ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
+                      Printing...
                     </>
                   ) : (
                     <>
-                      <Download className="mr-2 h-4 w-4" />
-                      Generate PDF
+                      <Printer className="mr-2 h-4 w-4" />
+                      Print PDF
                     </>
                   )}
                 </Button>
@@ -223,7 +291,7 @@ const MasterGradeSheet = () => {
 
             {selectedGrade && selectedSection && (
               <div className="text-sm text-muted-foreground mt-4">
-                <strong>Preview:</strong> This will generate a master grade sheet for Grade {selectedGrade}, Section {selectedSection}
+                <strong>Preview:</strong> This will print a master grade sheet for Grade {selectedGrade}, Section {selectedSection}
                 {selectedDepartment && selectedDepartment !== 'All' && `, Department ${selectedDepartment}`}
                 {selectedSubject && ` - ${selectedSubject}`} (targeting {filteredStudents.length} students currently displayed)
               </div>

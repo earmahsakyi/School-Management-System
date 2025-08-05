@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { DashboardLayout } from '../dashboard/DashboardLayout';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Download, Loader2, FileText } from 'lucide-react';
+import { Search, Printer, Loader2, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getAllStudents, clearStudentErrors } from '../../actions/studentAction';
 import { toast } from 'react-hot-toast';
@@ -15,38 +15,105 @@ const TranscriptList = () => {
   const { students, loading, error } = useSelector(state => state.student);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [downloadingId, setDownloadingId] = useState(null);
+  const [printingId, setPrintingId] = useState(null);
 
-  // Handle PDF download
-  const handleDownload = async (studentId, studentName) => {
+  // Handle PDF print
+  const handlePrint = async (studentId, studentName) => {
     try {
-      setDownloadingId(studentId);
+      setPrintingId(studentId);
       const url = `/api/transcript/${studentId}`;
 
       const response = await fetch(url);
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.msg || 'Failed to download transcript');
+        throw new Error(errorData.msg || 'Failed to load transcript');
       }
 
       const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
+      const pdfUrl = window.URL.createObjectURL(blob);
+
+      // Method 1: Try direct window.open approach first
+      try {
+        const printWindow = window.open(pdfUrl, '_blank');
+        if (printWindow) {
+          printWindow.addEventListener('load', () => {
+            setTimeout(() => {
+              printWindow.print();
+              toast.success(`Print dialog opened for ${studentName}'s transcript!`);
+            }, 500);
+          });
+          
+          // Cleanup after some time
+          setTimeout(() => {
+            window.URL.revokeObjectURL(pdfUrl);
+          }, 10000);
+          
+          return; // Exit early if this method works
+        }
+      } catch (error) {
+        console.log('Window.open method failed, trying iframe method:', error);
+      }
+
+      // Method 2: Fallback to iframe approach with better timing
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.border = 'none';
+      iframe.src = pdfUrl;
       
-      // Format filename
-      const formattedName = studentName.replace(/\s+/g, '_');
-      link.download = `${formattedName}_Transcript.pdf`;
+      document.body.appendChild(iframe);
+
+      // Better event handling for iframe
+      const handleIframeLoad = () => {
+        setTimeout(() => {
+          try {
+            if (iframe.contentWindow) {
+              iframe.contentWindow.focus();
+              iframe.contentWindow.print();
+              toast.success(`Print dialog opened for ${studentName}'s transcript!`);
+            }
+          } catch (error) {
+            console.error('Print error:', error);
+            // Fallback: download the file instead
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            const formattedName = studentName.replace(/\s+/g, '_');
+            link.download = `${formattedName}_Transcript.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("PDF downloaded as fallback!");
+          }
+        }, 1000); // Increased delay to ensure PDF is fully loaded
+      };
+
+      // Add load event listener
+      iframe.addEventListener('load', handleIframeLoad);
       
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
+      // Cleanup function
+      const cleanup = () => {
+        try {
+          if (iframe && iframe.parentNode) {
+            iframe.removeEventListener('load', handleIframeLoad);
+            document.body.removeChild(iframe);
+          }
+          window.URL.revokeObjectURL(pdfUrl);
+        } catch (error) {
+          console.error('Cleanup error:', error);
+        }
+      };
+
+      // Set cleanup timeout
+      setTimeout(cleanup, 15000);
+
     } catch (error) {
-      console.error('Download failed:', error);
-      toast.error(`Failed to download transcript: ${error.message}`);
+      console.error('Print failed:', error);
+      toast.error(`Failed to print transcript: ${error.message}`);
     } finally {
-      setDownloadingId(null);
+      setPrintingId(null);
     }
   };
 
@@ -142,19 +209,19 @@ const TranscriptList = () => {
                     <TableCell className="text-right">
                       <Button 
                         size="sm" 
-                        onClick={() => handleDownload(student._id, `${student.firstName}_${student.lastName}`)}
-                        disabled={downloadingId === student._id}
+                        onClick={() => handlePrint(student._id, `${student.firstName}_${student.lastName}`)}
+                        disabled={printingId === student._id}
                         className="min-w-[100px]"
                       >
-                        {downloadingId === student._id ? (
+                        {printingId === student._id ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Downloading...
+                            Printing...
                           </>
                         ) : (
                           <>
-                            <Download className="mr-2 h-4 w-4" />
-                            Download
+                            <Printer className="mr-2 h-4 w-4" />
+                            Print
                           </>
                         )}
                       </Button>
