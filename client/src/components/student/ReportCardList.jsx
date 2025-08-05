@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { DashboardLayout } from '../dashboard/DashboardLayout';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import {  Download, Loader2 } from 'lucide-react';
+import { Printer, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getAllStudents, clearStudentErrors } from '../../actions/studentAction';
 import { toast } from 'react-hot-toast';
@@ -18,37 +18,107 @@ const ReportCardsList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [academicYear, setAcademicYear] = useState('2024/2025');
   const [selectedTerm, setSelectedTerm] = useState('all');
-  const [downloadingId, setDownloadingId] = useState(null);
+  const [printingId, setPrintingId] = useState(null);
 
-  // Handle PDF download
-  const handleDownload = async (studentId, academicYear, term, studentName) => {
+  // Handle PDF print
+  const handlePrint = async (studentId, academicYear, term, studentName) => {
     try {
-      setDownloadingId(studentId + term);
+      setPrintingId(studentId + term);
       let url = `/api/reportcard/${studentId}/${encodeURIComponent(academicYear)}`;
       if (term) {
         url += `/${term}`;
       }
 
       const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to download report card');
+      if (!response.ok) throw new Error('Failed to load report card');
 
       const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
+      const pdfUrl = window.URL.createObjectURL(blob);
+
+      // Method 1: Try direct window.open approach first
+      try {
+        const printWindow = window.open(pdfUrl, '_blank');
+        if (printWindow) {
+          printWindow.addEventListener('load', () => {
+            setTimeout(() => {
+              printWindow.print();
+              const termText = term ? `Term ${term}` : 'Annual';
+              toast.success(`Print dialog opened for ${studentName}'s ${termText} report card!`);
+            }, 500);
+          });
+          
+          // Cleanup after some time
+          setTimeout(() => {
+            window.URL.revokeObjectURL(pdfUrl);
+          }, 10000);
+          
+          return; // Exit early if this method works
+        }
+      } catch (error) {
+        console.log('Window.open method failed, trying iframe method:', error);
+      }
+
+      // Method 2: Fallback to iframe approach with better timing
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.border = 'none';
+      iframe.src = pdfUrl;
       
-      const termText = term ? `_Term${term}` : '_Annual';
-      link.download = `${studentName}_ReportCard_${academicYear.replace('/', '-')}${termText}.pdf`;
+      document.body.appendChild(iframe);
+
+      // Better event handling for iframe
+      const handleIframeLoad = () => {
+        setTimeout(() => {
+          try {
+            if (iframe.contentWindow) {
+              iframe.contentWindow.focus();
+              iframe.contentWindow.print();
+              const termText = term ? `Term ${term}` : 'Annual';
+              toast.success(`Print dialog opened for ${studentName}'s ${termText} report card!`);
+            }
+          } catch (error) {
+            console.error('Print error:', error);
+            // Fallback: download the file instead
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            const termText = term ? `_Term${term}` : '_Annual';
+            link.download = `${studentName}_ReportCard_${academicYear.replace('/', '-')}${termText}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("PDF downloaded as fallback!");
+          }
+        }, 1000); // Increased delay to ensure PDF is fully loaded
+      };
+
+      // Add load event listener
+      iframe.addEventListener('load', handleIframeLoad);
       
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
+      // Cleanup function
+      const cleanup = () => {
+        try {
+          if (iframe && iframe.parentNode) {
+            iframe.removeEventListener('load', handleIframeLoad);
+            document.body.removeChild(iframe);
+          }
+          window.URL.revokeObjectURL(pdfUrl);
+        } catch (error) {
+          console.error('Cleanup error:', error);
+        }
+      };
+
+      // Set cleanup timeout
+      setTimeout(cleanup, 15000);
+
     } catch (error) {
-      console.error('Download failed:', error);
-      toast.error(`Failed to download report card: ${error.message}`);
+      console.error('Print failed:', error);
+      toast.error(`Failed to print report card: ${error.message}`);
     } finally {
-      setDownloadingId(null);
+      setPrintingId(null);
     }
   };
 
@@ -148,15 +218,15 @@ const ReportCardsList = () => {
                     {selectedTerm !== 'all' ? ( // Check if a specific term is selected
                       <Button 
                         size="sm" 
-                        onClick={() => handleDownload(student._id, academicYear, selectedTerm, `${student.firstName}_${student.lastName}`)}
-                        disabled={downloadingId === student._id + selectedTerm}
+                        onClick={() => handlePrint(student._id, academicYear, selectedTerm, `${student.firstName}_${student.lastName}`)}
+                        disabled={printingId === student._id + selectedTerm}
                       >
-                        {downloadingId === student._id + selectedTerm ? (
+                        {printingId === student._id + selectedTerm ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
-                          <Download className="mr-2 h-4 w-4" />
+                          <Printer className="mr-2 h-4 w-4" />
                         )}
-                        Download
+                        Print
                       </Button>
                     ) : (
                       // Display options for Term 1, Term 2, and Annual if "All Terms" is selected
@@ -164,33 +234,39 @@ const ReportCardsList = () => {
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => handleDownload(student._id, academicYear, '1', `${student.firstName}_${student.lastName}`)}
-                          disabled={downloadingId === student._id + '1'}
+                          onClick={() => handlePrint(student._id, academicYear, '1', `${student.firstName}_${student.lastName}`)}
+                          disabled={printingId === student._id + '1'}
                         >
-                          {downloadingId === student._id + '1' ? (
+                          {printingId === student._id + '1' ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : null}
+                          ) : (
+                            <Printer className="mr-2 h-4 w-4" />
+                          )}
                           Term 1
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => handleDownload(student._id, academicYear, '2', `${student.firstName}_${student.lastName}`)}
-                          disabled={downloadingId === student._id + '2'}
+                          onClick={() => handlePrint(student._id, academicYear, '2', `${student.firstName}_${student.lastName}`)}
+                          disabled={printingId === student._id + '2'}
                         >
-                          {downloadingId === student._id + '2' ? (
+                          {printingId === student._id + '2' ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : null}
+                          ) : (
+                            <Printer className="mr-2 h-4 w-4" />
+                          )}
                           Term 2
                         </Button>
                         <Button 
                           size="sm"
-                          onClick={() => handleDownload(student._id, academicYear, null, `${student.firstName}_${student.lastName}`)}
-                          disabled={downloadingId === student._id + 'null'}
+                          onClick={() => handlePrint(student._id, academicYear, null, `${student.firstName}_${student.lastName}`)}
+                          disabled={printingId === student._id + 'null'}
                         >
-                          {downloadingId === student._id + 'null' ? (
+                          {printingId === student._id + 'null' ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : null}
+                          ) : (
+                            <Printer className="mr-2 h-4 w-4" />
+                          )}
                           Annual
                         </Button>
                       </>

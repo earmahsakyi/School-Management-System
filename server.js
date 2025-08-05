@@ -71,6 +71,7 @@ app.use('/api/payments', require('./routes/payment'));
 app.use('/api/other-payments', require('./routes/otherPayment'));
 app.use('/api/financial', require('./routes/financialReport'));
 app.use('/api/tvet', require('./routes/tvet'));
+app.use('/api/other', require('./routes/otherPaymentReport')); 
 app.use('/api/tvet-financial', require('./routes/tvetFinancialReport'));
 
 // Serve frontend build (important for Railway deployment)

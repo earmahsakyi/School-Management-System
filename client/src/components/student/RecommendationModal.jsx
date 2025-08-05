@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Download, FileText } from 'lucide-react';
+import { X, Printer, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const RecommendationModal = ({ isOpen, onClose, student }) => {
@@ -39,7 +39,7 @@ const RecommendationModal = ({ isOpen, onClose, student }) => {
     }));
   };
 
-  const handleGeneratePDF = async () => {
+  const handlePrintPDF = async () => {
     if (!student?.id) return;
 
     setIsGenerating(true);
@@ -55,14 +55,83 @@ const RecommendationModal = ({ isOpen, onClose, student }) => {
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `${student.firstName}_${student.lastName}_Recommendation.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+
+        // Method 1: Try direct window.open approach first
+        try {
+          const printWindow = window.open(url, '_blank');
+          if (printWindow) {
+            printWindow.addEventListener('load', () => {
+              setTimeout(() => {
+                printWindow.print();
+                toast.success("Print dialog opened for recommendation letter!");
+              }, 500);
+            });
+            
+            // Cleanup after some time
+            setTimeout(() => {
+              window.URL.revokeObjectURL(url);
+            }, 10000);
+            
+            return; // Exit early if this method works
+          }
+        } catch (error) {
+          console.log('Window.open method failed, trying iframe method:', error);
+        }
+
+        // Method 2: Fallback to iframe approach with better timing
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.top = '-9999px';
+        iframe.style.left = '-9999px';
+        iframe.style.width = '1px';
+        iframe.style.height = '1px';
+        iframe.style.border = 'none';
+        iframe.src = url;
+        
+        document.body.appendChild(iframe);
+
+        // Better event handling for iframe
+        const handleIframeLoad = () => {
+          setTimeout(() => {
+            try {
+              if (iframe.contentWindow) {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+                toast.success("Print dialog opened for recommendation letter!");
+              }
+            } catch (error) {
+              console.error('Print error:', error);
+              // Fallback: download the file instead
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `${student.firstName}_${student.lastName}_Recommendation.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              toast.success("PDF downloaded as fallback!");
+            }
+          }, 1000); // Increased delay to ensure PDF is fully loaded
+        };
+
+        // Add load event listener
+        iframe.addEventListener('load', handleIframeLoad);
+        
+        // Cleanup function
+        const cleanup = () => {
+          try {
+            if (iframe && iframe.parentNode) {
+              iframe.removeEventListener('load', handleIframeLoad);
+              document.body.removeChild(iframe);
+            }
+            window.URL.revokeObjectURL(url);
+          } catch (error) {
+            console.error('Cleanup error:', error);
+          }
+        };
+
+        // Set cleanup timeout
+        setTimeout(cleanup, 15000);
+
       } else {
         throw new Error('Failed to generate PDF');
       }
@@ -198,12 +267,12 @@ const RecommendationModal = ({ isOpen, onClose, student }) => {
             Cancel
           </button>
           <button
-            onClick={handleGeneratePDF}
+            onClick={handlePrintPDF}
             disabled={isGenerating || !formData.purpose.trim()}
             className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-teal-600 border border-transparent rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Download className="w-4 h-4" />
-            <span>{isGenerating ? 'Generating...' : 'Generate PDF'}</span>
+            <Printer className="w-4 h-4" />
+            <span>{isGenerating ? 'Generating...' : 'Print PDF'}</span>
           </button>
         </div>
       </div>

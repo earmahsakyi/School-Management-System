@@ -27,6 +27,7 @@ import MasterGradeSheet from './components/staff/MasterGradeSheet';
 import PaymentsPage from './components/payment/PaymentPage';
 import OtherPayment from './components/payment/OtherPayment'
 import FinancialReport from './components/staff/FinancialReport';
+import OtherPaymentReport from './components/staff/OtherPaymentReport';
 import PromotionDashboard from './components/dashboard/PromotionDasboard';
 import TvetPaymentsPage from './components/payment/TvetPaymentPage';
 import ParentDashboard from './components/dashboard/ParentDashboard';
@@ -65,6 +66,7 @@ const AppInner = () => {
       <Route path="/tvet-report" element={<PrivateRoute element={TvetFinancialReport} />} />
       <Route path="/staff/:id/documents" element={<PrivateRoute element={StaffDocuments} />} />
       <Route path="/student/:id/documents" element={<PrivateRoute element={StudentDocuments} />} />
+      <Route path="/other-report" element={<PrivateRoute element={OtherPaymentReport} />} />
       <Route
   path="/students"
   element={
