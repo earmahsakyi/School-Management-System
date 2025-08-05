@@ -49,3 +49,74 @@ Object.keys(validCodes).forEach((key) => {
 });
 
 console.log('Valid Codes:', validCodes);
+
+import {
+  VERIFY_PASSCODE_SUCCESS,
+  VERIFY_PASSCODE_FAIL,
+  VERIFY_PASSCODE_LOADING
+} from './types.js'
+
+// Debug: Log environment variables (remove this after debugging)
+console.log('Environment Variables Debug:');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('REACT_APP_STUDENTS_PASSCODE:', process.env.REACT_APP_STUDENTS_PASSCODE);
+console.log('REACT_APP_PAYMENTS_PASSCODE:', process.env.REACT_APP_PAYMENTS_PASSCODE);
+console.log('All REACT_APP variables:', Object.keys(process.env).filter(key => key.startsWith('REACT_APP_')));
+
+// Get passcodes from environment variables with fallbacks
+// const validCodes = {
+//   'grade-section': process.env.REACT_APP_GRADE_SECTION_PASSCODE || 'B151616',
+//   students: process.env.REACT_APP_STUDENTS_PASSCODE || 'A198678',
+//   staff: process.env.REACT_APP_STAFF_PASSCODE || 'A198678',
+//   transcript: process.env.REACT_APP_TRANSCRIPT_PASSCODE || 'A198678',
+//   'grade-sheet': process.env.REACT_APP_GRADE_SHEET_PASSCODE || 'A198678',
+//   'roster-summary': process.env.REACT_APP_ROSTER_SUMMARY_PASSCODE || 'A198678',
+//   payments: process.env.REACT_APP_PAYMENTS_PASSCODE || 'C16213',
+//   promotion: process.env.REACT_APP_PROMOTION_PASSCODE || 'A198678',
+//   'other-payments': process.env.REACT_APP_OTHER_PAYMENTS_PASSCODE || 'C16213',
+//   'tvet-payments': process.env.REACT_APP_TVET_PAYMENTS_PASSCODE || 'C16213',
+//   'financial-report': process.env.REACT_APP_FINANCIAL_REPORT_PASSCODE || 'C16213',
+// };
+
+// Debug: Log the valid codes (remove this after debugging)
+console.log('Valid Codes:', validCodes);
+
+export const verifyPasscode = (section, inputCode) => (dispatch) => {
+  dispatch(setPasscodeLoading());
+  
+  // Debug logging
+  console.log('Verifying passcode for section:', section);
+  console.log('Input code:', inputCode);
+  console.log('Expected code:', validCodes[section]);
+  console.log('Code match:', validCodes[section] === inputCode);
+  
+  // Add a small delay to show loading state
+  setTimeout(() => {
+    if (validCodes[section] === inputCode) {
+      console.log('✅ Passcode verification SUCCESS for:', section);
+      dispatch({
+        type: VERIFY_PASSCODE_SUCCESS,
+        payload: section,
+      });
+    } else {
+      console.log('❌ Passcode verification FAILED for:', section);
+      dispatch({
+        type: VERIFY_PASSCODE_FAIL,
+        payload: section,
+      });
+    }
+  }, 500);
+};
+
+export const setPasscodeLoading = () => {
+  return {
+    type: VERIFY_PASSCODE_LOADING
+  }
+};
+
+// Action to reset all passcode access (useful for logout)
+export const resetPasscodeAccess = () => (dispatch) => {
+  dispatch({
+    type: 'RESET_PASSCODE_ACCESS'
+  });
+};
