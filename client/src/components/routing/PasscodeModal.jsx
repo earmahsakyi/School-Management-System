@@ -95,7 +95,7 @@ const PasscodeModal = ({ section, onClose, onSuccess }) => {
               
               <button
                 type="submit"
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors flex items-center justify-center"
+                className="flex-1 bg-indigo-800 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors flex items-center justify-center"
                 disabled={loading || !code.trim()}
               >
                 {loading ? (
