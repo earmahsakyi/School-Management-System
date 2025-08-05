@@ -22,7 +22,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateStaff } from '@/actions/staffAction';
-import { Camera, RotateCcw, Check, X, Loader2, Upload, FileText, Trash2 } from 'lucide-react';
+import { Camera, RotateCcw, Check, X, Loader2, Upload, FileText, Trash2, Plus } from 'lucide-react';
 
 export function EditStaffModal({ 
   open, 
@@ -51,15 +51,10 @@ export function EditStaffModal({
       qualifications: '',
       email: '',
       phone: '',
-      currentAddress:'',
+      currentAddress: '',
       nationality: '',
       nationalID: '',
       maritalStatus: '',
-      institutionAttended: {
-        name: '',
-        startYear: '',
-        endYear: ''
-      },
       ssn: '',
       payrollNumber: '',
       yearOfEmployment: '',
@@ -79,6 +74,8 @@ export function EditStaffModal({
   // Document states
   const [certificateFiles, setCertificateFiles] = useState([]);
   const [existingCertificates, setExistingCertificates] = useState([]);
+  // Institution states
+  const [institutions, setInstitutions] = useState([{ name: '', qualification: '', startYear: '', endYear: '' }]);
 
   // Utility function to get staff avatar
   const getStaffAvatar = (staff) => {
@@ -107,16 +104,13 @@ export function EditStaffModal({
       setValue('gender', staffData.gender || '');
       setValue('position', staffData.position || '');
       setValue('department', staffData.department || '');
-      setValue('qualifications', staffData.qualifications || '');
+      setValue('qualifications', Array.isArray(staffData.qualifications) ? staffData.qualifications.join(', ') : '');
       setValue('email', staffData.email || '');
       setValue('phone', staffData.phone || '');
-      setValue('maritalStatus',staffData.maritalStatus || '');
+      setValue('maritalStatus', staffData.maritalStatus || '');
       setValue('nationality', staffData.nationality || '');
       setValue('currentAddress', staffData.currentAddress || '');
       setValue('nationalID', staffData.nationalID || '');
-      setValue('name', staffData.institutionAttended?.name || '');
-      setValue('startYear', staffData.institutionAttended?.startYear || '');
-      setValue('endYear', staffData.institutionAttended?.endYear || '');
       setValue('ssn', staffData.ssn || '');
       setValue('payrollNumber', staffData.payrollNumber || '');
       setValue('yearOfEmployment', staffData.yearOfEmployment || '');
@@ -129,6 +123,16 @@ export function EditStaffModal({
       // Set existing certificates
       if (staffData.certificates && Array.isArray(staffData.certificates)) {
         setExistingCertificates(staffData.certificates);
+      }
+
+      // Set institution attended
+      if (staffData.institutionAttended && Array.isArray(staffData.institutionAttended)) {
+        setInstitutions(staffData.institutionAttended.map(inst => ({
+          name: inst.name || '',
+          qualification: inst.qualification || '',
+          startYear: inst.startYear || '',
+          endYear: inst.endYear || ''
+        })));
       }
     }
   }, [isEditing, staffData, open, setValue]);
@@ -146,18 +150,13 @@ export function EditStaffModal({
         qualifications: '',
         phone: '',
         email: '',
-        currentAddress:'',
+        currentAddress: '',
         nationality: '',
         nationalID: '',
         maritalStatus: '',
-        institutionAttended: {
-        name: '',
-        startYear: '',
-        endYear: ''
-      },
-      ssn: '',
-      yearOfEmployment: '',
-      payrollNumber: '',
+        ssn: '',
+        yearOfEmployment: '',
+        payrollNumber: '',
       });
       setCapturedImage(null);
       setExistingPhotoUrl(null);
@@ -166,6 +165,7 @@ export function EditStaffModal({
       setExistingCertificates([]);
       setUploadedPhotoFile(null);
       setUploadedPhotoPreview(null);
+      setInstitutions([{ name: '', qualification: '', startYear: '', endYear: '' }]);
     }
   }, [open, reset]);
 
@@ -251,88 +251,7 @@ export function EditStaffModal({
     setExistingPhotoUrl(null);
   };
 
-  const onSubmit = async (data) => {
-    try {
-      // Create FormData for multipart/form-data
-      const formData = new FormData();
-      
-      // Map form fields to match your API expectations
-      formData.append('firstName', data.firstName || '');
-      formData.append('lastName', data.lastName || '');
-      formData.append('dob', data.dob || '');
-      formData.append('gender', data.gender || '');
-      formData.append('position', data.position || '');
-      formData.append('department', data.department || '');
-      formData.append('qualifications', data.qualifications || '');
-      formData.append('email', data.email || '');
-      formData.append('phone', data.phone || '');
-      formData.append('currentAddress', data.currentAddress || '');
-      formData.append('nationality', data.nationality || '');
-      formData.append('maritalStatus', data.maritalStatus || '');
-      formData.append('nationalID', data.nationalID || '');
-      formData.append('ssn', data.ssn || '');
-      formData.append('yearOfEmployment', data.yearOfEmployment || '');
-      formData.append('payrollNumber', data.payrollNumber || '');
-
-      if(data.name) formData.append('name',data.name)
-      if (data.startYear) formData.append('startYear', data.startYear);
-      if (data.endYear) formData.append('endYear', data.endYear);
-      
-      // Add captured photo if available
-      if (capturedImage) {
-        const photoFile = base64ToFile(capturedImage, `staff_${Date.now()}.jpg`);
-        if (photoFile) {
-          formData.append('photo', photoFile);
-        }
-      } else if (uploadedPhotoFile) {
-        formData.append('photo', uploadedPhotoFile);
-      }
-
-      // If editing and existing photo was removed, indicate photo should be removed
-      if (isEditing && existingPhotoUrl === null && !capturedImage && !uploadedPhotoFile && staffData?.photo) {
-        formData.append('removePhoto', 'true');
-      }
-
-      // Add new certificate files if selected
-      certificateFiles.forEach((file) => {
-        formData.append('certificates', file);
-      });
-
-      // Handle removed existing certificates
-      if (isEditing && staffData?.certificates) {
-        const removedCertificates = staffData.certificates.filter(
-          (cert, index) => !existingCertificates.some((existing, existingIndex) => 
-            existingIndex === staffData.certificates.findIndex(c => c === cert)
-          )
-        );
-        
-        if (removedCertificates.length > 0) {
-          formData.append('removedCertificates', JSON.stringify(removedCertificates));
-        }
-      }
-
-      // Dispatch the appropriate action
-      if (isEditing && staffData?._id) {
-        await dispatch(updateStaff(staffData._id, formData));
-        toast.success(`${data.firstName} ${data.lastName} has been updated successfully!`);
-      }
-      
-      // Reset form and close modal
-      reset();
-      setCapturedImage(null);
-      setExistingPhotoUrl(null);
-      setCertificateFiles([]);
-      setExistingCertificates([]);
-      onOpenChange(false);
-      setUploadedPhotoFile(null);
-      setUploadedPhotoPreview(null);
-      
-    } catch (err) {
-      console.error('Error saving staff:', err);
-      toast.error(error || 'Failed to update staff. Please try again.');
-    }
-  };
-  
+  // Handle photo upload
   const handlePhotoUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -370,12 +289,109 @@ export function EditStaffModal({
     setUploadedPhotoPreview(null);
   };
 
+  // Add new institution
+  const addInstitution = () => {
+    setInstitutions([...institutions, { name: '', qualification: '', startYear: '', endYear: '' }]);
+  };
+
+  // Update institution field
+  const updateInstitution = (index, field, value) => {
+    const newInstitutions = [...institutions];
+    newInstitutions[index][field] = value;
+    setInstitutions(newInstitutions);
+  };
+
+  // Remove institution
+  const removeInstitution = (index) => {
+    setInstitutions(institutions.filter((_, i) => i !== index));
+  };
+
   // Get current photo to display
   const getCurrentPhoto = () => {
     if (capturedImage) return capturedImage;
     if (uploadedPhotoPreview) return uploadedPhotoPreview;
     if (existingPhotoUrl) return existingPhotoUrl;
     return null;
+  };
+
+  const onSubmit = async (data) => {
+    try {
+      // Create FormData for multipart/form-data
+      const formData = new FormData();
+      
+      // Map form fields to match API expectations
+      formData.append('firstName', data.firstName || '');
+      formData.append('lastName', data.lastName || '');
+      formData.append('dob', data.dob || '');
+      formData.append('gender', data.gender || '');
+      formData.append('position', data.position || '');
+      formData.append('department', data.department || '');
+      formData.append('qualifications', data.qualifications || '');
+      formData.append('email', data.email || '');
+      formData.append('phone', data.phone || '');
+      formData.append('currentAddress', data.currentAddress || '');
+      formData.append('nationality', data.nationality || '');
+      formData.append('maritalStatus', data.maritalStatus || '');
+      formData.append('nationalID', data.nationalID || '');
+      formData.append('ssn', data.ssn || '');
+      formData.append('yearOfEmployment', data.yearOfEmployment || '');
+      formData.append('payrollNumber', data.payrollNumber || '');
+      formData.append('institutionAttended', JSON.stringify(institutions.filter(inst => inst.name || inst.qualification || inst.startYear || inst.endYear)));
+      
+      // Add captured photo if available
+      if (capturedImage) {
+        const photoFile = base64ToFile(capturedImage, `staff_${Date.now()}.jpg`);
+        if (photoFile) {
+          formData.append('photo', photoFile);
+        }
+      } else if (uploadedPhotoFile) {
+        formData.append('photo', uploadedPhotoFile);
+      }
+
+      // If editing and existing photo was removed, indicate photo should be removed
+      if (isEditing && existingPhotoUrl === null && !capturedImage && !uploadedPhotoFile && staffData?.photo) {
+        formData.append('removePhoto', 'true');
+      }
+
+      // Add new certificate files if selected
+      certificateFiles.forEach((file) => {
+        formData.append('certificates', file);
+      });
+
+      // Handle removed existing certificates
+      if (isEditing && staffData?.certificates) {
+        const removedCertificates = staffData.certificates.filter(
+          (cert, index) => !existingCertificates.some((existing, existingIndex) => 
+            existingIndex === staffData.certificates.findIndex(c => c === cert)
+          )
+        );
+        
+        if (removedCertificates.length > 0) {
+          formData.append('removedCertificates', JSON.stringify(removedCertificates));
+        }
+      }
+
+      // Dispatch the update action
+      if (isEditing && staffData?._id) {
+        await dispatch(updateStaff(staffData._id, formData));
+        toast.success(`${data.firstName} ${data.lastName} has been updated successfully!`);
+      }
+      
+      // Reset form and close modal
+      reset();
+      setCapturedImage(null);
+      setExistingPhotoUrl(null);
+      setCertificateFiles([]);
+      setExistingCertificates([]);
+      setUploadedPhotoFile(null);
+      setUploadedPhotoPreview(null);
+      setInstitutions([{ name: '', qualification: '', startYear: '', endYear: '' }]);
+      onOpenChange(false);
+      
+    } catch (err) {
+      console.error('Error saving staff:', err);
+      toast.error(error || 'Failed to update staff. Please try again.');
+    }
   };
 
   const departments = ['Arts', 'Science', 'Administration', 'Other'];
@@ -403,7 +419,7 @@ export function EditStaffModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Edit Staff' : 'Add New Staff'}
@@ -672,7 +688,7 @@ export function EditStaffModal({
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName">First Name*</Label>
+                <Label htmlFor="firstName">First Name *</Label>
                 <Input
                   id="firstName"
                   {...register('firstName', { required: 'First name is required' })}
@@ -684,7 +700,7 @@ export function EditStaffModal({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name*</Label>
+                <Label htmlFor="lastName">Last Name *</Label>
                 <Input
                   id="lastName"
                   {...register('lastName', { required: 'Last name is required' })}
@@ -698,7 +714,7 @@ export function EditStaffModal({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="dob">Date of Birth*</Label>
+                <Label htmlFor="dob">Date of Birth *</Label>
                 <Input
                   id="dob"
                   type="date"
@@ -710,10 +726,10 @@ export function EditStaffModal({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="gender">Gender*</Label>
+                <Label htmlFor="gender">Gender *</Label>
                 <Select 
                   value={watchedGender} 
-                  onValueChange={(value) => setValue('gender', value)}
+                  onValueChange={(value) => setValue('gender', value, { shouldValidate: true })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select gender" />
@@ -734,7 +750,7 @@ export function EditStaffModal({
               <Label htmlFor="nationalID">National ID</Label>
               <Input
                 id="nationalID"
-                {...register('nationalID', {required: 'National ID is required'})}
+                {...register('nationalID', { required: 'National ID is required' })}
                 placeholder="Enter national ID number"
               />
               {errors.nationalID && (
@@ -746,7 +762,7 @@ export function EditStaffModal({
               <Label htmlFor="nationality">Nationality</Label>
               <Input
                 id="nationality"
-                {...register('nationality', { required : 'Nationality is required'})}
+                {...register('nationality', { required: 'Nationality is required' })}
                 placeholder="Enter nationality here"
               />
               {errors.nationality && (
@@ -771,6 +787,7 @@ export function EditStaffModal({
               <Select
                 value={watchedMaritalStatus} 
                 onValueChange={(value) => setValue('maritalStatus', value, { shouldValidate: true })}
+                {...register('maritalStatus', { required: 'Marital Status is required' })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Marital Status" />
@@ -796,10 +813,11 @@ export function EditStaffModal({
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="position">Position*</Label>
+                <Label htmlFor="position">Position *</Label>
                 <Select 
                   value={watchedPosition} 
-                  onValueChange={(value) => setValue('position', value)}
+                  onValueChange={(value) => setValue('position', value, { shouldValidate: true })}
+                  {...register('position', { required: 'Position is required' })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select position" />
@@ -818,10 +836,11 @@ export function EditStaffModal({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
+                <Label htmlFor="department">Department *</Label>
                 <Select 
                   value={watchedDepartment} 
-                  onValueChange={(value) => setValue('department', value)}
+                  onValueChange={(value) => setValue('department', value, { shouldValidate: true })}
+                  {...register('department', { required: 'Department is required' })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select department" />
@@ -834,95 +853,136 @@ export function EditStaffModal({
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.department && (
+                  <p className="text-sm text-destructive">Department is required</p>
+                )}
               </div>
-              </div>
+            </div>
 
             <div className="space-y-2">
-              <Label htmlFor="qualifications">Qualifications</Label>
+              <Label htmlFor="qualifications">Other Qualifications (Optional)</Label>
               <Input
                 id="qualifications"
                 {...register('qualifications')}
-                placeholder="Enter qualifications (e.g., B.Ed, M.A Mathematics)"
+                placeholder="e.g. Additional Cert 1, Additional Cert 2 (comma-separated)"
               />
             </div>
-            <div className="space-y-2">
-                            <Label htmlFor="ssn">Social Security Number(SSN)</Label>
-                            <Input
-                              id="ssn"
-                              type="number"
-                              {...register('ssn',{ required: 'Social Security Number is required '})}
-                              placeholder="e.g. 401500"
-                            />
-                            {errors.ssn && (
-                               <p className="text-sm text-destructive">{errors.ssn.message}</p>
-                            )}
-                          </div>
-            
-                          <div className="space-y-2">
-                            <Label htmlFor="payrollNumber">Payroll Number</Label>
-                            <Input
-                              id="payrollNumber"
-                              type="number"
-                              {...register('payrollNumber', {required: 'Payroll Number is required'})}
-                              placeholder="e.g. 401500"
-                            />
-                            {errors.payrollNumber && (
-                               <p className="text-sm text-destructive">{errors.payrollNumber.message}</p>
-                            )}
-                          </div>
-            
-                          <div className="space-y-2">
-                            <Label htmlFor="yearOfEmployment">Year of Employment</Label>
-                            <Input
-                              id="yearOfEmployment"
-                              type="number"
-                              {...register('yearOfEmployment', {required: 'Year Of Employment is required'})}
-                              placeholder="e.g. 2019"
-                            />
-                            {errors.yearOfEmployment && (
-                               <p className="text-sm text-destructive">{errors.yearOfEmployment.message}</p>
-                            )}
-                          </div>
 
-             <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-foreground border-b pb-2">
-              Educational Background
-            </h3>
             <div className="space-y-2">
-                <Label htmlFor="name">Institution Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  {...register('name')}
-                  placeholder="e.g. University of Liberia"
-                />
-              </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startYear">Institution Start Year</Label>
-                <Input
-                  id="startYear"
-                  type="number"
-                  min="1950"
-                  max={new Date().getFullYear()}
-                  {...register('startYear')}
-                  placeholder="e.g. 2015"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="endYear">Institution End Year</Label>
-                <Input
-                  id="endYear"
-                  type="number"
-                  min="1950"
-                  max={new Date().getFullYear() + 10}
-                  {...register('endYear')}
-                  placeholder="e.g. 2019"
-                />
-              </div>
+              <Label htmlFor="ssn">Social Security Number (SSN)</Label>
+              <Input
+                id="ssn"
+                type="number"
+                {...register('ssn', { required: 'Social Security Number is required' })}
+                placeholder="e.g. 401500"
+              />
+              {errors.ssn && (
+                <p className="text-sm text-destructive">{errors.ssn.message}</p>
+              )}
             </div>
-          </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="payrollNumber">Payroll Number</Label>
+              <Input
+                id="payrollNumber"
+                type="number"
+                {...register('payrollNumber', { required: 'Payroll Number is required' })}
+                placeholder="e.g. 401500"
+              />
+              {errors.payrollNumber && (
+                <p className="text-sm text-destructive">{errors.payrollNumber.message}</p>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="yearOfEmployment">Year of Employment</Label>
+              <Input
+                id="yearOfEmployment"
+                type="number"
+                {...register('yearOfEmployment', { required: 'Year Of Employment is required' })}
+                placeholder="e.g. 2019"
+              />
+              {errors.yearOfEmployment && (
+                <p className="text-sm text-destructive">{errors.yearOfEmployment.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-semibold text-foreground border-b pb-2">
+                  Educational Background
+                </h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addInstitution}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Institution
+                </Button>
+              </div>
+              {institutions.map((inst, index) => (
+                <div key={index} className="border p-4 rounded-lg space-y-2 relative">
+                  {institutions.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeInstitution(index)}
+                      className="absolute top-2 right-2 h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor={`name-${index}`}>Institution Name</Label>
+                    <Input
+                      id={`name-${index}`}
+                      value={inst.name}
+                      onChange={(e) => updateInstitution(index, 'name', e.target.value)}
+                      placeholder="e.g. University of Liberia"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`qualification-${index}`}>Qualification</Label>
+                    <Input
+                      id={`qualification-${index}`}
+                      value={inst.qualification}
+                      onChange={(e) => updateInstitution(index, 'qualification', e.target.value)}
+                      placeholder="e.g. B.Sc Computer Science"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor={`startYear-${index}`}>Start Year</Label>
+                      <Input
+                        id={`startYear-${index}`}
+                        type="number"
+                        min="1950"
+                        max={new Date().getFullYear()}
+                        value={inst.startYear}
+                        onChange={(e) => updateInstitution(index, 'startYear', e.target.value)}
+                        placeholder="e.g. 2015"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`endYear-${index}`}>End Year</Label>
+                      <Input
+                        id={`endYear-${index}`}
+                        type="number"
+                        min="1950"
+                        max={new Date().getFullYear() + 10}
+                        value={inst.endYear}
+                        onChange={(e) => updateInstitution(index, 'endYear', e.target.value)}
+                        placeholder="e.g. 2019"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Contact Information */}
@@ -933,7 +993,7 @@ export function EditStaffModal({
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email*</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -952,7 +1012,7 @@ export function EditStaffModal({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone*</Label>
+                <Label htmlFor="phone">Phone *</Label>
                 <Input
                   id="phone"
                   {...register('phone', { 

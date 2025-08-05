@@ -54,27 +54,147 @@ const AppInner = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/complete-admin-profile" element={<PrivateRoute element={AdminProfileForm} />} />
-      <Route path="/students" element={<PrivateRoute element={Students} />} />
-      <Route path="/staff" element={<PrivateRoute element={Staff} />} />
-      <Route path="/grade-section" element={<PrivateRoute element={GradeSection} />} />
       <Route path="/admin-dashboard" element={<PrivateRoute element={AdminPage} />} />
       <Route path="/class-performance" element={<PrivateRoute element={ClassPerformancePage} />} />
       <Route path="/student-performance" element={<PrivateRoute element={StudentPerformancePage} />} />
       <Route path="/grades" element={<PrivateRoute element={GradesPage} />} />
-      <Route path="/transcript" element={<PrivateRoute element={TranscriptList} />} />
       <Route path="/admin/promotion/:studentId" element={<PrivateRoute element={AdminPromotionView} />} />
       <Route path="/reportCards" element={<PrivateRoute element={ReportCardsList} />} />
-      <Route path="/grade-sheet" element={<PrivateRoute element={MasterGradeSheet} />} />
-      <Route path="/roster-summary" element={<PrivateRoute element={RoosterSummary} />} />
-      <Route path="/payments" element={<PrivateRoute element={PaymentsPage} />} />
-      <Route path="/financial-report" element={<PrivateRoute element={FinancialReport} />} />
-      <Route path="/promotion" element={<PrivateRoute element={PromotionDashboard} />} />
-      <Route path="/other-payments" element={<PrivateRoute element={OtherPayment} />} />
-      <Route path="/tvet-payments" element={<PrivateRoute element={TvetPaymentsPage} />} />
       <Route path="/parent-dashboard" element={<PrivateRoute element={ParentDashboard} />} />
       <Route path="/tvet-report" element={<PrivateRoute element={TvetFinancialReport} />} />
       <Route path="/staff/:id/documents" element={<PrivateRoute element={StaffDocuments} />} />
       <Route path="/student/:id/documents" element={<PrivateRoute element={StudentDocuments} />} />
+      <Route
+  path="/students"
+  element={
+    <PrivateRoute>
+      <PasscodeProtectedRoute section="students">
+        <Students />
+      </PasscodeProtectedRoute>
+    </PrivateRoute>
+  }
+/>
+
+<Route
+  path="/staff"
+  element={
+    <PrivateRoute>
+      <PasscodeProtectedRoute section="staff">
+        <Staff />
+      </PasscodeProtectedRoute>
+    </PrivateRoute>
+  }
+/>
+
+<Route
+  path="/grade-section"
+  element={
+    <PrivateRoute>
+      <PasscodeProtectedRoute section="grade-section">
+        <GradeSection />
+      </PasscodeProtectedRoute>
+    </PrivateRoute>
+  }
+/>
+
+<Route
+  path="/transcript"
+  element={
+    <PrivateRoute>
+      <PasscodeProtectedRoute section="transcript">
+        <TranscriptList />
+      </PasscodeProtectedRoute>
+    </PrivateRoute>
+  }
+/>
+
+<Route
+  path="/admin/promotion/:studentId"
+  element={
+    <PrivateRoute>
+      <PasscodeProtectedRoute section="promotion">
+        <AdminPromotionView />
+      </PasscodeProtectedRoute>
+    </PrivateRoute>
+  }
+/>
+
+<Route
+  path="/grade-sheet"
+  element={
+    <PrivateRoute>
+      <PasscodeProtectedRoute section="grade-sheet">
+        <MasterGradeSheet />
+      </PasscodeProtectedRoute>
+    </PrivateRoute>
+  }
+/>
+
+<Route
+  path="/roster-summary"
+  element={
+    <PrivateRoute>
+      <PasscodeProtectedRoute section="roster-summary">
+        <RoosterSummary />
+      </PasscodeProtectedRoute>
+    </PrivateRoute>
+  }
+/>
+
+<Route
+  path="/payments"
+  element={
+    <PrivateRoute>
+      <PasscodeProtectedRoute section="payments">
+        <PaymentsPage />
+      </PasscodeProtectedRoute>
+    </PrivateRoute>
+  }
+/>
+
+<Route
+  path="/financial-report"
+  element={
+    <PrivateRoute>
+      <PasscodeProtectedRoute section="financial-report">
+        <FinancialReport />
+      </PasscodeProtectedRoute>
+    </PrivateRoute>
+  }
+/>
+
+<Route
+  path="/promotion"
+  element={
+    <PrivateRoute>
+      <PasscodeProtectedRoute section="promotion">
+        <PromotionDashboard />
+      </PasscodeProtectedRoute>
+    </PrivateRoute>
+  }
+/>
+
+<Route
+  path="/other-payments"
+  element={
+    <PrivateRoute>
+      <PasscodeProtectedRoute section="other-payments">
+        <OtherPayment />
+      </PasscodeProtectedRoute>
+    </PrivateRoute>
+  }
+/>
+
+<Route
+  path="/tvet-payments"
+  element={
+    <PrivateRoute>
+      <PasscodeProtectedRoute section="tvet-payments">
+        <TvetPaymentsPage />
+      </PasscodeProtectedRoute>
+    </PrivateRoute>
+  }
+/>
  
     </Routes>
   );

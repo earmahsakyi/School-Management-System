@@ -42,8 +42,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getAllStaff, deleteStaff, clearStaffErrors } from '../../actions/staffAction';
 import { useNavigate } from 'react-router-dom';
 
-
-
 const departments = ['Arts', 'Science', 'Administration', 'Other'];
 const position = [
   'Teacher',
@@ -62,7 +60,6 @@ const position = [
 ];
 
 const getStaffAvatar = (staff) => {
-  // const API_BASE_URL = 'http://localhost:5000';
   let avatarSrc = `https://ui-avatars.com/api/?name=${encodeURIComponent(
     (staff?.firstName || '') + ' ' + (staff?.lastName || 'Staff')
   )}&background=random&color=fff&size=40&rounded=true`;
@@ -170,10 +167,18 @@ const Staff = () => {
       },
       {
         accessorKey: 'qualifications',
-        header: 'Qualification',
-        cell: ({ row }) => <div className="text-sm font-medium">{row.original?.qualifications?.length > 0
-  ? row.original.qualifications.join(', ')
-  : 'N/A'}</div>,
+        header: 'Qualifications',
+        cell: ({ row }) => {
+          const staff = row.original || {};
+          const institutionQuals = staff.institutionAttended?.map(inst => inst.qualification).filter(q => q) || [];
+          const otherQuals = staff.qualifications || [];
+          const allQuals = [...institutionQuals, ...otherQuals];
+          return (
+            <div className="text-sm font-medium">
+              {allQuals.length > 0 ? allQuals.join(', ') : 'N/A'}
+            </div>
+          );
+        },
       },
       {
         id: 'actions',
@@ -245,10 +250,7 @@ const Staff = () => {
   });
 
   const handleEdit = useCallback((staffId) => {
-    
-    // Use staff from state, fallback to ref if state is empty
     const staffsToUse = (staff && staff.length > 0) ? staff : staffsRef.current;
-    
     
     if (!staffsToUse || !Array.isArray(staffsToUse) || staffsToUse.length === 0) {
       console.error('No staff data available, refreshing...');
@@ -256,15 +258,13 @@ const Staff = () => {
       return;
     }
     
-    const staffMember = staffsToUse.find(s => s._id === staffId)
+    const staffMember = staffsToUse.find(s => s._id === staffId);
     
     if (staffMember) {
       setStaffToEdit(staffMember);
       setIsEditStaffOpen(true);
     }
   }, [staff, dispatch]);
-
-
 
   const handleDeleteClick = useCallback((staffMember) => {
     setStaffToDelete(staffMember);
@@ -285,6 +285,7 @@ const Staff = () => {
       setDeleteLoading(false);
     }
   };
+
   const handleAddStaff = () => {
     setIsAddStaffOpen(true);
   };

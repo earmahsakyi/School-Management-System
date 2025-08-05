@@ -1,9 +1,9 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
-import   { Stars } from 'lucide-react'
+import { Stars } from 'lucide-react'
 
-const PrivateRoute = ({ element: Component }) => {
+const PrivateRoute = ({ children, element: Component }) => {
   const { isAuthenticated, loading, token } = useSelector((state) => state.auth);
 
   // If we're still loading and have a token, show loader
@@ -19,8 +19,8 @@ const PrivateRoute = ({ element: Component }) => {
         <Stars className="animate-spin mr-2 w-6 h-6 text-blue-500" /> Loading ...
       </div>;
 
-  // If authenticated, render the component
-  return <Component />;
+  // If authenticated, render the component or children
+  return children || <Component />;
 };
 
 export default PrivateRoute;

@@ -67,11 +67,12 @@ const staffSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  institutionAttended: {
+  institutionAttended: [{
     name:{ type: String},
+    qualification: { type: String },
     startYear: { type: Number },
     endYear: { type: Number }
-  },
+  }],
   nationalID: {
     type: String,
     default: ''

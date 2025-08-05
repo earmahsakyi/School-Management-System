@@ -5,6 +5,7 @@ import studentReducer from "./studentReducer";
 import staffReducer from "./staffReducer";
 import gradeReducer from "./gradeReducer";
 import announcementReducer from "./announcementReducer";
+import passcodeReducer from "./passcodeReducer";
 
 
 
@@ -15,6 +16,7 @@ const appReducer = combineReducers({
   staff: staffReducer,
   grade: gradeReducer,
   announcement: announcementReducer,
+  passcode: passcodeReducer,
  
 });
 
