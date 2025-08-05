@@ -67,7 +67,7 @@ const generateMasterGradeSheetPdf = async ({ students, gradeLevel, classSection,
       .school-name {
         font-size: 18pt;
         font-weight: bold;
-        color: chocolate;
+        color: maroon;
         margin: 5px 0;
       }
       .school-location {

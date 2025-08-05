@@ -39,7 +39,7 @@ const generateFinancialReportPdf = async ({ payments, gradeLevel, classSection, 
         .header { text-align: center; margin-bottom: 10mm; }
         .header-content { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .header-text { flex: 1; text-align: center; }
-        .school-name { font-size: 14pt; font-weight: bold; margin-bottom: 3px; }
+        .school-name { font-size: 14pt; font-weight: bold; margin-bottom: 3px; color:maroon; }
         .school-location { font-size: 11pt; margin-bottom: 2px; }
         .country { font-size: 11pt; margin-bottom: 2px; }
         .contact { font-size: 9pt; margin-bottom: 5px; }

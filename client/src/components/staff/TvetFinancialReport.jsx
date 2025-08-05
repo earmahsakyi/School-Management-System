@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { DashboardLayout } from '../dashboard/DashboardLayout';
-import { Search, Download, Loader2, DollarSign, Filter, Calendar, Eye, GraduationCap, Users } from 'lucide-react';
+import { Search, Download, Loader2, DollarSign, Filter, Calendar, Eye, GraduationCap, Users, Printer } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAllStudents, clearStudentErrors } from '../../actions/studentAction';
@@ -21,6 +21,7 @@ const TvetFinancialReport = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [downloading, setDownloading] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [studentSummaryData, setStudentSummaryData] = useState(null);
@@ -68,6 +69,107 @@ const TvetFinancialReport = () => {
       toast.error(`Failed to generate TVET financial report: ${error.message}`);
     } finally {
       setDownloading(false);
+    }
+  };
+
+  // Handle TVET Financial Report PDF printing
+  const handlePrintTvetFinancialReport = async () => {
+    try {
+      setPrinting(true);
+
+      const queryParams = new URLSearchParams({
+        academicYear: academicYear
+      });
+
+      if (startDate) queryParams.append('startDate', startDate);
+      if (endDate) queryParams.append('endDate', endDate);
+      if (studentID) queryParams.append('studentID', studentID);
+      if (studentName) queryParams.append('studentName', studentName);
+
+      const url = `/api/tvet-financial/report?${queryParams}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate TVET financial report');
+      }
+
+      const blob = await response.blob();
+      const pdfUrl = window.URL.createObjectURL(blob);
+
+      // Try direct window.open approach first
+      try {
+        const printWindow = window.open(pdfUrl, '_blank');
+        if (printWindow) {
+          printWindow.addEventListener('load', () => {
+            setTimeout(() => {
+              printWindow.print();
+              toast.success("Print dialog opened for TVET financial report!");
+            }, 500);
+          });
+          setTimeout(() => {
+            window.URL.revokeObjectURL(pdfUrl);
+          }, 10000);
+          return;
+        }
+      } catch (error) {
+        console.log('Window.open method failed, trying iframe method:', error);
+      }
+
+      // Fallback to iframe approach
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.border = 'none';
+      iframe.src = pdfUrl;
+      document.body.appendChild(iframe);
+
+      const handleIframeLoad = () => {
+        setTimeout(() => {
+          try {
+            if (iframe.contentWindow) {
+              iframe.contentWindow.focus();
+              iframe.contentWindow.print();
+              toast.success("Print dialog opened for TVET financial report!");
+            }
+          } catch (error) {
+            console.error('Print error:', error);
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            const filename = `TVET_Financial_Report_${academicYear}${studentID ? `_${studentID}` : ''}${startDate ? `_from_${startDate}` : ''}${endDate ? `_to_${endDate}` : ''}_${new Date().getTime()}.pdf`;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("PDF downloaded successfully!");
+          }
+        }, 1000);
+      };
+
+      iframe.addEventListener('load', handleIframeLoad);
+
+      const cleanup = () => {
+        try {
+          if (iframe && iframe.parentNode) {
+            iframe.removeEventListener('load', handleIframeLoad);
+            document.body.removeChild(iframe);
+          }
+          window.URL.revokeObjectURL(pdfUrl);
+        } catch (error) {
+          console.error('Cleanup error:', error);
+        }
+      };
+      
+      setTimeout(cleanup, 15000);
+
+    } catch (error) {
+      console.error('Print failed:', error);
+      toast.error(`Failed to print TVET financial report: ${error.message}`);
+    } finally {
+      setPrinting(false);
     }
   };
 
@@ -255,7 +357,7 @@ const TvetFinancialReport = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Button
                 onClick={handlePreviewReport}
                 disabled={previewing}
@@ -293,6 +395,24 @@ const TvetFinancialReport = () => {
               </Button>
               
               <Button
+                onClick={handlePrintTvetFinancialReport}
+                disabled={printing}
+                variant="secondary"
+              >
+                {printing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Preparing Print...
+                  </>
+                ) : (
+                  <>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print PDF
+                  </>
+                )}
+              </Button>
+
+              <Button
                 onClick={handleGenerateTvetFinancialReport}
                 disabled={downloading}
               >
@@ -304,7 +424,7 @@ const TvetFinancialReport = () => {
                 ) : (
                   <>
                     <Download className="mr-2 h-4 w-4" />
-                    Generate PDF
+                    Download PDF
                   </>
                 )}
               </Button>
