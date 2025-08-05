@@ -1,0 +1,11 @@
+{
+  "build": {
+    "command": "npm install && chmod +x build-client.sh && ./build-client.sh"
+  },
+  "deploy": {
+    "startCommand": "npm start"
+  },
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
