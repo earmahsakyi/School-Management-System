@@ -330,12 +330,12 @@ body {
       <div>
         <div class="signature-line"></div>
         <p><strong>REGISTRAR</strong></p>
-        <p style="font-size: 9pt;">Name & Signature</p>
+        
       </div>
       <div>
         <div class="signature-line"></div>
         <p><strong>PRINCIPAL</strong></p>
-        <p style="font-size: 9pt;">Name & Signature</p>
+        
       </div>
     </div>
 
