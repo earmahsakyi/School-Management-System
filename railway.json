@@ -1,11 +1,8 @@
 {
   "build": {
-    "command": "npm install && cd client && npm install && npm run build"
+    "command": "chmod +x build.sh && ./build.sh"
   },
   "deploy": {
     "startCommand": "npm start"
-  },
-  "env": {
-    "NODE_ENV": "production"
   }
 }
