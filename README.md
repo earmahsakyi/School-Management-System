@@ -1,7 +1,7 @@
 # 🏫 School Management System (MERN)
 
 A full-stack **School Management System** built using the **MERN stack** (MongoDB, Express, React, Node.js).  
-This system provides an end-to-end solution for managing students, teachers, grades, attendance, and report cards with admin and parent/student roles.
+This system provides an end-to-end solution for managing students, teachers, grades, attendance, and report cards with admin and parent roles.
 
 ---
 
