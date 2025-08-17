@@ -36,6 +36,20 @@ This system provides an end-to-end solution for managing students, teachers, gra
 - **Other Tools:** Multer (file upload), Puppeteer/jsPDF (report card PDF generation), Nodemon (dev server)  
 
 ---
+📸 Screenshots
+landingPage
+<img width="1920" height="969" alt="LandingPage (2)" src="https://github.com/user-attachments/assets/47a3322b-10f9-4576-a882-9b714f125df8" />
+
+Login page
+<img width="1920" height="970" alt="Login Page" src="https://github.com/user-attachments/assets/e261afa8-64ca-4d26-a0f1-6060334eb293" />
+Sign Up page
+<img width="1920" height="978" alt="Sign up page" src="https://github.com/user-attachments/assets/8d36ba77-ec41-4107-948e-469271322902" />
+dashboard
+<img width="1920" height="964" alt="dashboard" src="https://github.com/user-attachments/assets/b103a69b-5acf-4be6-9e5e-c7c0f3956121" />
+student section
+<img width="1920" height="975" alt="students section" src="https://github.com/user-attachments/assets/821bb018-6eb1-48aa-b851-f6ecf196387f" />
+student performance
+<img width="1920" height="974" alt="student performanc analysis" src="https://github.com/user-attachments/assets/cf08811a-a25a-4b2c-af95-f665dfe5d198" />
 
 ## 📂 Folder Structure
 
@@ -85,20 +99,7 @@ npm run dev
 Client runs on: http://localhost:3000
 Server runs on: http://localhost:5000
 
-📸 Screenshots
-landingPage
-<img width="1920" height="969" alt="LandingPage (2)" src="https://github.com/user-attachments/assets/47a3322b-10f9-4576-a882-9b714f125df8" />
 
-Login page
-<img width="1920" height="970" alt="Login Page" src="https://github.com/user-attachments/assets/e261afa8-64ca-4d26-a0f1-6060334eb293" />
-Sign Up page
-<img width="1920" height="978" alt="Sign up page" src="https://github.com/user-attachments/assets/8d36ba77-ec41-4107-948e-469271322902" />
-dashboard
-<img width="1920" height="964" alt="dashboard" src="https://github.com/user-attachments/assets/b103a69b-5acf-4be6-9e5e-c7c0f3956121" />
-student section
-<img width="1920" height="975" alt="students section" src="https://github.com/user-attachments/assets/821bb018-6eb1-48aa-b851-f6ecf196387f" />
-student performance
-<img width="1920" height="974" alt="student performanc analysis" src="https://github.com/user-attachments/assets/cf08811a-a25a-4b2c-af95-f665dfe5d198" />
 
 🤝 Contribution
 
