@@ -70,8 +70,8 @@ const ResetPassword = () => {
        type: 'success', 
        message: 'Password reset was successful!' 
      });
-      localStorage.removeItem('email');
-     setTimeout(() => navigate('/'), 1000);
+     
+     setTimeout(() => navigate('/login'), 1000);
      }
      // Check for error in result (not res.error)
      if (result?.error) {
