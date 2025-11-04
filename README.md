@@ -49,26 +49,6 @@ dashboard
 student section
 <img width="1920" height="975" alt="students section" src="https://github.com/user-attachments/assets/821bb018-6eb1-48aa-b851-f6ecf196387f" />
 student performance
-<img width="1920" height="974" alt="student performanc analysis" src="https://github.com/user-attachments/assets/cf08811a-a25a-4b2c-af95-f665dfe5d198" />
-
-## 📂 Folder Structure
-
-project-root/
-│── client/ # React frontend (runs from project root)
-│ ├── src/
-│ └── package.json
-│
-│ # Express backend
-│── models/ # Mongoose models (Student, Parent, Grade, PromotionRecord, etc.)
-│── controllers/ # Business logic
-│── routes/ # API routes
-│── middleware/ # Auth, uploads, error handling
-│── config/ # DB & environment setup
-│── server.js
-│
-├── .env # Environment variables
-├── package.json # Root (concurrently runs client & server)
-└── README.md
 
 ## ⚙️ Installation & Setup
 
