@@ -43,7 +43,7 @@ app.use(helmet({
 
 app.use(getClientIp);
 
-// app.use('/api/', apiLimiter);
+app.use('/api/', apiLimiter);
 
 // Middleware
 app.use(express.json({ extended: false }));

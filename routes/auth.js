@@ -9,6 +9,7 @@ const {
   passwordResetLimiter, 
   emailVerificationLimiter 
 } = require('../middleware/rateLimiter');
+const getClientIp = require('../middleware/getClientIp');
 
 router.use(getClientIp);
 
