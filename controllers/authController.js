@@ -102,7 +102,7 @@ exports.AuthUserToken = async (req, res) => {
         if (user.lockLevel >= 3) {
           user.lockedManually = true;
           const html = `
-  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
     <h2 style="color: #D32F2F;">Account Locked</h2>
     <p>Hello,</p>
     <p>We noticed multiple unsuccessful login attempts on your account associated with this email address.</p>

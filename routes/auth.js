@@ -4,22 +4,23 @@ const authController = require('../controllers/authController');
 const auth = require('../middleware/auth');
 const { check, body } =require('express-validator');
 const secretKey = require('../middleware/checkSecretKey')
-const rateLimit = require('express-rate-limit');
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5, 
-  message: {
-    msg: 'Too many login attempts. Please try again after 15 minutes.'
-  },
-});
+const { 
+  authLimiter, 
+  passwordResetLimiter, 
+  emailVerificationLimiter 
+} = require('../middleware/rateLimiter');
+
+router.use(getClientIp);
+
+
 
 router.get('/',auth, authController.getLoginUser);
-router.post('/login', [
+router.post('/login',  authLimiter, [
     check("email", "Please include a valid email").isEmail(),
     check("password", "Password is required").exists()
-],loginLimiter, authController.AuthUserToken);
+], authController.AuthUserToken);
 
-router.post('/register',secretKey,[
+router.post('/register', authLimiter,secretKey,[
     check('email', 'Please enter your email').isEmail(),
     check('password', 'Please enter a password with 8 or more characters').isLength({min: 8}),
     
@@ -27,7 +28,7 @@ router.post('/register',secretKey,[
 ], 
 authController.registerUser);
 
-router.post('/forgot-password', secretKey,
+router.post('/forgot-password',passwordResetLimiter, secretKey,
     [
       body('email').isEmail().withMessage(('Invalid Email Format'))  
     ],
@@ -36,7 +37,7 @@ router.post('/forgot-password', secretKey,
 )
 
 
-router.post('/reset-password', 
+router.post('/reset-password', passwordResetLimiter,
     [
       check('password', 'Please enter a password with 8 or more characters').isLength({min : 8})  
     ],
@@ -45,14 +46,14 @@ router.post('/reset-password',
 )
 
 
-router.post('/verify-email', 
+router.post('/verify-email', emailVerificationLimiter,
     [check("email", "Please include a valid email").isEmail(),],
     authController.verifyEmail
 
 )
 
 
-router.post('/confirm-email-verification', 
+router.post('/confirm-email-verification', emailVerificationLimiter,
     [
          check('email', 'Please enter a valid email').isEmail(),
   check('code', 'Verification code is required').notEmpty()

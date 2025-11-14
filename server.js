@@ -2,7 +2,8 @@ const express = require('express');
 const ConnectDB = require('./config/db');
 const path = require('path');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit')
+const { apiLimiter } = require('./middleware/rateLimiter');
+const getClientIp = require('./middleware/getClientIp');
 
 const app = express();
 
@@ -40,14 +41,9 @@ app.use(helmet({
   },
 }));
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per 15 minutes
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true, // Include RateLimit headers in responses
-  legacyHeaders: false, // Disable older X-RateLimit headers
-})
-app.use(limiter);
+app.use(getClientIp);
+
+app.use('/api/', apiLimiter);
 
 // Middleware
 app.use(express.json({ extended: false }));
